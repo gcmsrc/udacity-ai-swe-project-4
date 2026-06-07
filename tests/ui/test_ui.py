@@ -1,3 +1,4 @@
+from typing import cast
 from unittest.mock import patch
 
 import pytest
@@ -9,7 +10,7 @@ from flashcard_quiz.utils.ui import UI, TerminalRichUI, TerminalUI
 @pytest.fixture(params=[TerminalUI, TerminalRichUI], ids=["plain", "rich"])
 def ui(request: pytest.FixtureRequest) -> UI:
     """Each contract test runs against both UI implementations."""
-    return request.param()
+    return cast(UI, request.param())
 
 
 @pytest.fixture

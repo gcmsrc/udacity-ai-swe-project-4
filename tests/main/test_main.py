@@ -171,3 +171,23 @@ def test_session_result_persisted(runner: CliRunner, deck_file: Path) -> None:
         mock_repo_cls.return_value.save_session_result.assert_called_once_with(
             "sid", fake_result
         )
+
+
+def test_show_history_flag_invokes_get_and_show_history(
+    runner: CliRunner, deck_file: Path
+) -> None:
+    fake_result = SessionResult(total=1, correct=1, missed=[])
+    with (
+        patch("flashcard_quiz.main.DatabaseConnection"),
+        patch("flashcard_quiz.main.SessionRepository") as mock_repo_cls,
+        patch("flashcard_quiz.main.QuizEngine") as mock_engine_cls,
+        patch("flashcard_quiz.main.TerminalRichUI") as mock_rich,
+        patch("flashcard_quiz.main.TerminalUI"),
+    ):
+        mock_repo_cls.return_value.create_session.return_value = "test-session-id"
+        mock_engine_cls.return_value.run.return_value = fake_result
+        mock_repo_cls.return_value.get_history.return_value = [0.5, 1.0]
+        result = runner.invoke(app, [str(deck_file), "--show-history"])
+    assert result.exit_code == 0
+    mock_repo_cls.return_value.get_history.assert_called_once_with(str(deck_file))
+    mock_rich.return_value.show_history.assert_called_once_with([0.5, 1.0])

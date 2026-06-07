@@ -9,6 +9,7 @@ A CLI flashcard quiz application built with Python and [Typer](https://typer.tia
   - `random` — cards shuffled each session
   - `adaptive` — missed cards are re-weighted and drawn more often until the session ends
 - **Session persistence** — results are saved to a local SQLite database (`data/db/flashcards.db`)
+- **Score history** — `--show-history` displays a per-attempt bar chart for the current deck after each session
 - **Rich terminal UI** — clean prompts and a summary table powered by [Rich](https://github.com/Textualize/rich)
 - **Bundled sample decks** — `data/sample_cards.json` and `data/countries.json` to get started immediately
 
@@ -48,6 +49,7 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 flashcard data/sample_cards.json                       # sequential (default)
 flashcard data/sample_cards.json --mode random
 flashcard data/sample_cards.json --mode adaptive
+flashcard data/sample_cards.json --show-history        # show score history after session
 ```
 
 ### Via Python directly
@@ -56,6 +58,7 @@ flashcard data/sample_cards.json --mode adaptive
 python src/flashcard_quiz/main.py data/sample_cards.json
 python src/flashcard_quiz/main.py data/sample_cards.json --mode random
 python src/flashcard_quiz/main.py data/sample_cards.json --mode adaptive
+python src/flashcard_quiz/main.py data/sample_cards.json --show-history
 ```
 
 ### With uv (no manual activation needed)
@@ -63,7 +66,16 @@ python src/flashcard_quiz/main.py data/sample_cards.json --mode adaptive
 ```bash
 uv run flashcard data/sample_cards.json
 uv run flashcard data/sample_cards.json --mode adaptive
+uv run flashcard data/sample_cards.json --show-history
 ```
+
+### Options
+
+| Flag | Default | Description |
+|---|---|---|
+| `--mode` | `sequential` | Quiz ordering: `sequential`, `random`, or `adaptive` |
+| `--show-history` | off | After the session, display a bar chart of per-attempt scores for the deck |
+| `--plain-terminal` | off | Use plain text output instead of the Rich-styled UI |
 
 ## Deck format
 

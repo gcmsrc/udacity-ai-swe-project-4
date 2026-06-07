@@ -14,6 +14,15 @@ _NO_HISTORY_MSG = (
 )
 
 
+def _make_bar(pct: float) -> str:
+    filled = round(pct * _BAR_WIDTH)
+    return "█" * filled + "░" * (_BAR_WIDTH - filled)
+
+
+def _attempt_label(n: int) -> str:
+    return "attempt" if n == 1 else "attempts"
+
+
 class UI(Protocol):
     """Terminal I/O protocol — any object with these methods qualifies."""
 
@@ -39,8 +48,7 @@ class TerminalUI:
 
     def show_summary(self, result: SessionResult) -> None:
         """Print the session score and, if any, the list of missed cards."""
-        ratio = result.correct / result.total if result.total else 0
-        print(f"\nResult: {result.correct}/{result.total} ({ratio:.0%})")
+        print(f"\nResult: {result.correct}/{result.total} ({result.score:.0%})")
         if result.missed:
             print("Missed:", ", ".join(result.missed))
 
@@ -58,12 +66,9 @@ class TerminalUI:
             print(_NO_HISTORY_MSG)
             return
         n = len(history)
-        label = "attempt" if n == 1 else "attempts"
-        print(f"\nDeck History ({n} {label}):")
+        print(f"\nDeck History ({n} {_attempt_label(n)}):")
         for i, pct in enumerate(history, start=1):
-            filled = round(pct * _BAR_WIDTH)
-            bar = "█" * filled + "░" * (_BAR_WIDTH - filled)
-            print(f"  #{i:>3}: {pct:>5.0%}  {bar}")
+            print(f"  #{i:>3}: {pct:>5.0%}  {_make_bar(pct)}")
 
 
 class TerminalRichUI:
@@ -103,9 +108,8 @@ class TerminalRichUI:
 
     def show_summary(self, result: SessionResult) -> None:
         """Render a score table and a panel listing any missed cards."""
-        ratio = result.correct / result.total if result.total else 0
         table = Table(
-            title="\U0001f4ca Session Summary",
+            title="📊 Session Summary",
             header_style="bold blue",
             border_style="blue",
         )
@@ -113,10 +117,10 @@ class TerminalRichUI:
         table.add_column("Value", style="bold", justify="right")
         table.add_row("Total", str(result.total))
         table.add_row("Correct", f"[green]{result.correct}[/]")
-        table.add_row("Score", f"[bold magenta]{ratio:.0%}[/]")
+        table.add_row("Score", f"[bold magenta]{result.score:.0%}[/]")
         self._console.print(table)
         if result.missed:
-            missed = Text("\U0001f4cc Missed: ", style="bold yellow")
+            missed = Text("📌 Missed: ", style="bold yellow")
             missed.append(", ".join(result.missed), style="red")
             self._console.print(Panel(missed, border_style="yellow"))
 
@@ -135,9 +139,8 @@ class TerminalRichUI:
             self._console.print(Panel(_NO_HISTORY_MSG, border_style="dim"))
             return
         n = len(history)
-        label = "attempt" if n == 1 else "attempts"
         table = Table(
-            title=f"Deck History ({n} {label})",
+            title=f"Deck History ({n} {_attempt_label(n)})",
             header_style="bold blue",
             border_style="blue",
         )
@@ -147,13 +150,6 @@ class TerminalRichUI:
         for i, pct in enumerate(history, start=1):
             filled = round(pct * _BAR_WIDTH)
             color = "green" if pct >= 0.8 else "yellow" if pct >= 0.5 else "red"
-            bar = (
-                f"[{color}]"
-                + "█" * filled
-                + "[/]"
-                + "[dim]"
-                + "░" * (_BAR_WIDTH - filled)
-                + "[/]"
-            )
+            bar = f"[{color}]{'█' * filled}[/][dim]{'░' * (_BAR_WIDTH - filled)}[/]"
             table.add_row(str(i), f"[bold]{pct:.0%}[/]", bar)
         self._console.print(table)

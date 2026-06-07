@@ -268,6 +268,26 @@
 
 **AI Response:** Added `get_history(dataset) -> list[float]` to `session_repository.py` — queries all completed sessions for a deck ordered oldest-first and returns `correct/total` per row. Added `show_history` to the `UI` Protocol and to both concrete classes in `ui.py`: `TerminalUI` renders a 20-char ASCII bar chart (`█`/`░`) with per-attempt percentages; `TerminalRichUI` renders a `rich` table with a score column and a color-coded bar (green ≥ 80 %, yellow ≥ 50 %, red below). Both emit a "No history found…" message when passed an empty list. Added the `--show-history` flag to `main.py`; after `save_session_result`, it calls `repo.get_history` and `ui.show_history` when the flag is set. Added 5 `get_history` tests to `test_session_repository.py` and 7 `show_history` tests to `test_ui.py`. All 99 tests pass.  
 
+## Session: 2026-06-07 21:26:15 (id: 7215110a-dce2-423f-93f5-bf947d93a8ea)
+
+**Context:** Run a high-effort code review on the latest changes (`--show-history` feature + `TerminalRichUI`) using a multi-angle analysis framework covering correctness, removed behaviour, cross-file impact, reuse, simplification, efficiency, and architecture.  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** Asked Claude to run a code review on the latest git diff using the `/code-review` skill, then produce a structured report (per the `docs/code-generation/review/code-review.md` template) and save it to `docs/code-generation/progress/code-review.md`.  
+
+**AI Response:** Gathered the full diff across `main.py`, `session_repository.py`, `ui.py`, and three test files. Ran format checks (`black`, `isort`, `flake8`, `mypy`) and `pytest --cov` in parallel, then fanned out 7 independent finder agents (line-by-line scan, removed-behaviour audit, cross-file tracer, reuse, simplification, efficiency, altitude). Identified two correctness bugs: uncaught `json.JSONDecodeError` from `get_history` propagating as a raw traceback (HIGH), and path-string mismatch between `create_session` and `get_history` across runs (MEDIUM). Confirmed two mypy errors (`data: dict` missing type args in `session_repository.py:83`; `no-any-return` in `test_ui.py:12`), two black/flake8 violations in test files, and a critical test gap: the `--show-history` branch in `main.py` has 0% integration coverage. Also flagged architectural smell of manual JSON key access bypassing `SessionResult`, duplicated bar-chart calculation across both renderers, and timestamp-ordering flakiness risk in the ordering test. Saved the full report to `docs/code-generation/progress/code-review.md`.  
+
+## Session: 2026-06-07 21:32:50 (id: bcd55484-793f-47c2-8731-ba6ef3a9f851)
+
+**Context:** Implement the accepted fixes from the code review of the `--show-history` feature, targeting duplication, magic values, type safety, code smells, and a missing integration test.  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** Given an annotated accept/discard list over the code review findings in `docs/code-generation/progress/code-review.md`, implement fixes D1–D3, M1, T1–T2, CS1–CS3, and TT1; ignore TT2 and TT3.  
+
+**AI Response:** Made changes across five files. In `models.py`: added `score: float` property (`correct/total`, 0.0 when total is zero) and a `from_json(s: str) -> SessionResult` classmethod that delegates JSON parsing to the model itself. In `session_repository.py`: removed manual JSON parsing and replaced it with `SessionResult.from_json(row["result"])`; added `assert isinstance(row["result"], str)` for type narrowing (CS3); removed the `json` import. In `ui.py`: extracted `_make_bar(pct)` and `_attempt_label(n)` module-level helpers (D1, D2); both `show_summary` implementations now use `result.score` instead of the inline division (D3); replaced `"\U0001f4ca"` / `"\U0001f4cc"` with literal `"📊"` / `"📌"` (M1); replaced the 4–5 `+` concatenations in `TerminalRichUI.show_history` with a single f-string (CS2). In `test_ui.py`: added `cast(UI, request.param())` to the `ui` fixture to eliminate the mypy `[no-any-return]` error (T2). In `test_main.py`: added `test_show_history_flag_invokes_get_and_show_history`, an integration test that passes `--show-history` to the CLI, configures `mock_repo.get_history.return_value = [0.5, 1.0]`, and asserts both `get_history` and `show_history` are called with the correct arguments (TT1). All 100 tests pass; mypy reports zero errors.  
+
 ## Session: 2026-06-07 18:50:32 (id: 40a7a945-ba34-4dbe-9fcc-cd36f8f8429f)
 
 **Context:** Update the architecture document to describe how `main.py` integrates the Typer CLI, including arguments, invocation forms, application flow, and error handling.  

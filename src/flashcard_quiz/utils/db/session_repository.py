@@ -1,6 +1,5 @@
 """Session persistence layer — stores quiz sessions and serialised results."""
 
-import json
 import uuid
 from datetime import datetime, timezone
 
@@ -80,9 +79,8 @@ class SessionRepository:
         rows = self.db.execute(_SQL_GET_HISTORY, (dataset,))
         history: list[float] = []
         for row in rows:
-            data: dict = json.loads(str(row["result"]))
-            total: int = data.get("total", 0)
-            correct: int = data.get("correct", 0)
-            if total > 0:
-                history.append(correct / total)
+            assert isinstance(row["result"], str)
+            result = SessionResult.from_json(row["result"])
+            if result.total > 0:
+                history.append(result.score)
         return history
