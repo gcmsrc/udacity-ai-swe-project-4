@@ -1,0 +1,7 @@
+pyproject.toml
+flashcard_quiz.egg-info/PKG-INFO
+flashcard_quiz.egg-info/SOURCES.txt
+flashcard_quiz.egg-info/dependency_links.txt
+flashcard_quiz.egg-info/entry_points.txt
+flashcard_quiz.egg-info/requires.txt
+flashcard_quiz.egg-info/top_level.txt

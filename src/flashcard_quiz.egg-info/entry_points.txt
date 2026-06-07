@@ -1,0 +1,2 @@
+[console_scripts]
+flashcard = flashcard_quiz.main:app

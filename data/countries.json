@@ -1,0 +1,162 @@
+[
+    {
+        "front": "FRA",
+        "back": "France"
+    },
+    {
+        "front": "DEU",
+        "back": "Germany"
+    },
+    {
+        "front": "ITA",
+        "back": "Italy"
+    },
+    {
+        "front": "ESP",
+        "back": "Spain"
+    },
+    {
+        "front": "PRT",
+        "back": "Portugal"
+    },
+    {
+        "front": "GBR",
+        "back": "United Kingdom"
+    },
+    {
+        "front": "IRL",
+        "back": "Ireland"
+    },
+    {
+        "front": "NLD",
+        "back": "Netherlands"
+    },
+    {
+        "front": "BEL",
+        "back": "Belgium"
+    },
+    {
+        "front": "LUX",
+        "back": "Luxembourg"
+    },
+    {
+        "front": "CHE",
+        "back": "Switzerland"
+    },
+    {
+        "front": "AUT",
+        "back": "Austria"
+    },
+    {
+        "front": "POL",
+        "back": "Poland"
+    },
+    {
+        "front": "CZE",
+        "back": "Czech Republic"
+    },
+    {
+        "front": "SVK",
+        "back": "Slovakia"
+    },
+    {
+        "front": "HUN",
+        "back": "Hungary"
+    },
+    {
+        "front": "ROU",
+        "back": "Romania"
+    },
+    {
+        "front": "BGR",
+        "back": "Bulgaria"
+    },
+    {
+        "front": "GRC",
+        "back": "Greece"
+    },
+    {
+        "front": "SWE",
+        "back": "Sweden"
+    },
+    {
+        "front": "NOR",
+        "back": "Norway"
+    },
+    {
+        "front": "DNK",
+        "back": "Denmark"
+    },
+    {
+        "front": "FIN",
+        "back": "Finland"
+    },
+    {
+        "front": "ISL",
+        "back": "Iceland"
+    },
+    {
+        "front": "USA",
+        "back": "United States"
+    },
+    {
+        "front": "CAN",
+        "back": "Canada"
+    },
+    {
+        "front": "MEX",
+        "back": "Mexico"
+    },
+    {
+        "front": "BRA",
+        "back": "Brazil"
+    },
+    {
+        "front": "ARG",
+        "back": "Argentina"
+    },
+    {
+        "front": "CHL",
+        "back": "Chile"
+    },
+    {
+        "front": "AUS",
+        "back": "Australia"
+    },
+    {
+        "front": "NZL",
+        "back": "New Zealand"
+    },
+    {
+        "front": "JPN",
+        "back": "Japan"
+    },
+    {
+        "front": "CHN",
+        "back": "China"
+    },
+    {
+        "front": "IND",
+        "back": "India"
+    },
+    {
+        "front": "KOR",
+        "back": "South Korea"
+    },
+    {
+        "front": "SGP",
+        "back": "Singapore"
+    },
+    {
+        "front": "ZAF",
+        "back": "South Africa"
+    },
+    {
+        "front": "EGY",
+        "back": "Egypt"
+    },
+    {
+        "front": "TUR",
+        "back": "Turkey"
+    }
+]

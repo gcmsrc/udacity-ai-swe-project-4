@@ -2,8 +2,8 @@
 
 import random
 
-from utils.models import Flashcard
-from utils.strategies.base import QuizMode
+from flashcard_quiz.utils.models import Flashcard
+from flashcard_quiz.utils.strategies.base import QuizMode
 
 _MISSED_WEIGHT_MULTIPLIER: float = 2.0
 

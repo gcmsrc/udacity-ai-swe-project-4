@@ -1,6 +1,6 @@
-from utils.models import Flashcard, SessionResult
-from utils.strategies.base import QuizMode
-from utils.ui import UI
+from flashcard_quiz.utils.models import Flashcard, SessionResult
+from flashcard_quiz.utils.strategies.base import QuizMode
+from flashcard_quiz.utils.ui import UI
 
 
 class QuizEngine:

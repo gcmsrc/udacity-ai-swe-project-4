@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from utils.models import Flashcard, SessionResult
+from flashcard_quiz.utils.models import Flashcard, SessionResult
 
 
 class UI(Protocol):

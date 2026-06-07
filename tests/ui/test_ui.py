@@ -2,8 +2,8 @@ from unittest.mock import patch
 
 import pytest
 
-from utils.models import Flashcard, SessionResult
-from utils.ui import TerminalUI
+from flashcard_quiz.utils.models import Flashcard, SessionResult
+from flashcard_quiz.utils.ui import TerminalUI
 
 
 @pytest.fixture

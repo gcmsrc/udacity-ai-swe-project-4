@@ -11,7 +11,7 @@ from typing import Any, cast
 
 import typer
 
-from utils.models import Flashcard
+from flashcard_quiz.utils.models import Flashcard
 
 _WRAPPED_KEY = "cards"
 _REQUIRED_FIELDS = ("front", "back")

@@ -1,6 +1,6 @@
 """Context class for the Strategy pattern — holds and swaps a quiz strategy."""
 
-from utils.strategies.base import QuizMode
+from flashcard_quiz.utils.strategies.base import QuizMode
 
 
 class GamePlanner:

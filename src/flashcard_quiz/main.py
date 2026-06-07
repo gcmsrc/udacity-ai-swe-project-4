@@ -5,7 +5,7 @@ and SQLite session persistence into a single Typer command.
 
 Usage::
 
-    python main.py DECK_FILE [--mode sequential|random|adaptive]
+    flashcard DECK_FILE [--mode sequential|random|adaptive]
 """
 
 from pathlib import Path
@@ -13,15 +13,15 @@ from typing import Annotated
 
 import typer
 
-from utils.data_loader import load_flashcards
-from utils.db import DatabaseConnection, SessionRepository
-from utils.quiz_engine import QuizEngine
-from utils.strategies import get_strategy
-from utils.ui import TerminalUI
+from flashcard_quiz.utils.data_loader import load_flashcards
+from flashcard_quiz.utils.db import DatabaseConnection, SessionRepository
+from flashcard_quiz.utils.quiz_engine import QuizEngine
+from flashcard_quiz.utils.strategies import get_strategy
+from flashcard_quiz.utils.ui import TerminalUI
 
 app = typer.Typer(help="CLI flashcard quiz application.")
 
-_DB_PATH = Path(__file__).parent / "data/flashcards.db"
+_DB_PATH = Path.cwd() / "data" / "db" / "flashcards.db"
 
 
 @app.command()
@@ -51,6 +51,7 @@ def main(
     cards = load_flashcards(deck)
 
     db = DatabaseConnection()
+    _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     db.connect(_DB_PATH)
     repo = SessionRepository(db)
     session_id = repo.create_session(str(deck))

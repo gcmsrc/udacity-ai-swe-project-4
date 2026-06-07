@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from utils.models import Flashcard
+from flashcard_quiz.utils.models import Flashcard
 
 
 class QuizMode(ABC):

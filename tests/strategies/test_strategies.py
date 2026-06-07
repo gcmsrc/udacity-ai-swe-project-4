@@ -1,14 +1,14 @@
 import pytest
 
-from utils.models import Flashcard
-from utils.strategies import (
+from flashcard_quiz.utils.models import Flashcard
+from flashcard_quiz.utils.strategies import (
     AdaptiveStrategy,
     GamePlanner,
     RandomStrategy,
     SequentialStrategy,
     get_strategy,
 )
-from utils.strategies.base import QuizMode
+from flashcard_quiz.utils.strategies.base import QuizMode
 
 # ---------------------------------------------------------------------------
 # Fixtures

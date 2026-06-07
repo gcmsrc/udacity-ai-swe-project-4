@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from main import app
-from utils.models import SessionResult
+from flashcard_quiz.main import app
+from flashcard_quiz.utils.models import SessionResult
 
 
 @pytest.fixture
@@ -77,9 +77,9 @@ def _run_with_mocked_db_and_engine(
 ) -> "CliRunner":
     """Invoke the quiz command with DB and engine mocked out."""
     with (
-        patch("main.DatabaseConnection"),
-        patch("main.SessionRepository") as mock_repo_cls,
-        patch("main.QuizEngine") as mock_engine_cls,
+        patch("flashcard_quiz.main.DatabaseConnection"),
+        patch("flashcard_quiz.main.SessionRepository") as mock_repo_cls,
+        patch("flashcard_quiz.main.QuizEngine") as mock_engine_cls,
     ):
         mock_repo_cls.return_value.create_session.return_value = "test-session-id"
         mock_engine_cls.return_value.run.return_value = fake_result
@@ -120,9 +120,9 @@ def test_session_result_persisted(runner: CliRunner, deck_file: Path) -> None:
     """Verify save_session_result is called with the engine's return value."""
     fake_result = SessionResult(total=1, correct=1, missed=[])
     with (
-        patch("main.DatabaseConnection"),
-        patch("main.SessionRepository") as mock_repo_cls,
-        patch("main.QuizEngine") as mock_engine_cls,
+        patch("flashcard_quiz.main.DatabaseConnection"),
+        patch("flashcard_quiz.main.SessionRepository") as mock_repo_cls,
+        patch("flashcard_quiz.main.QuizEngine") as mock_engine_cls,
     ):
         mock_repo_cls.return_value.create_session.return_value = "sid"
         mock_engine_cls.return_value.run.return_value = fake_result

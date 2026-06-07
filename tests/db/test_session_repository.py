@@ -6,8 +6,8 @@ from typing import Generator
 
 import pytest
 
-from utils.db import DatabaseConnection, SessionRepository
-from utils.models import SessionResult
+from flashcard_quiz.utils.db import DatabaseConnection, SessionRepository
+from flashcard_quiz.utils.models import SessionResult
 
 
 @pytest.fixture

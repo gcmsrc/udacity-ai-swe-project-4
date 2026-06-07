@@ -5,8 +5,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import cast
 
-from utils.db.connection import DatabaseConnection
-from utils.models import SessionResult
+from flashcard_quiz.utils.db.connection import DatabaseConnection
+from flashcard_quiz.utils.models import SessionResult
 
 _SQL_INSERT_SESSION = (
     "INSERT INTO sessions (id, dataset, created_at, result) VALUES (?, ?, ?, NULL)"

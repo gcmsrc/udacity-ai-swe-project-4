@@ -1,7 +1,7 @@
 """Sequential quiz strategy — preserves the original deck order."""
 
-from utils.models import Flashcard
-from utils.strategies.base import _BaseIndexedStrategy
+from flashcard_quiz.utils.models import Flashcard
+from flashcard_quiz.utils.strategies.base import _BaseIndexedStrategy
 
 
 class SequentialStrategy(_BaseIndexedStrategy):

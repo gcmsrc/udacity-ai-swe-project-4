@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from utils.data_loader import CardsDataLoader
+from flashcard_quiz.utils.data_loader import CardsDataLoader
 
 SAMPLE_CARDS = [
     {"front": "CPU", "back": "Central Processing Unit"},

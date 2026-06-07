@@ -2,11 +2,11 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
-from utils.models import Flashcard, SessionResult
-from utils.quiz_engine import QuizEngine
-from utils.strategies import SequentialStrategy
-from utils.strategies.base import QuizMode
-from utils.ui import UI
+from flashcard_quiz.utils.models import Flashcard, SessionResult
+from flashcard_quiz.utils.quiz_engine import QuizEngine
+from flashcard_quiz.utils.strategies import SequentialStrategy
+from flashcard_quiz.utils.strategies.base import QuizMode
+from flashcard_quiz.utils.ui import UI
 
 
 @pytest.fixture
