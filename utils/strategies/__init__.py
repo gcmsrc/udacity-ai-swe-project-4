@@ -17,6 +17,7 @@ __all__ = [
 _REGISTRY: dict[str, type[QuizMode]] = {
     "sequential": SequentialStrategy,
     "random": RandomStrategy,
+    "adaptive": AdaptiveStrategy,
 }
 
 

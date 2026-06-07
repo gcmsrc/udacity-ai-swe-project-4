@@ -9,15 +9,18 @@ from utils.strategies.base import QuizMode
 class RandomStrategy(QuizMode):
     """Return cards in a randomly shuffled order."""
 
-    def order(self, cards: list[Flashcard]) -> list[Flashcard]:
-        """Return a shuffled copy of *cards*.
+    def __init__(self) -> None:
+        self._cards: list[Flashcard] = []
+        self._index: int = 0
 
-        Args:
-            cards: the full deck to order.
+    def setup(self, cards: list[Flashcard]) -> None:
+        self._cards = list(cards)
+        random.shuffle(self._cards)
+        self._index = 0
 
-        Returns:
-            A new list containing the same cards in random order.
-        """
-        shuffled = list(cards)
-        random.shuffle(shuffled)
-        return shuffled
+    def get_next_card(self) -> Flashcard | None:
+        if self._index >= len(self._cards):
+            return None
+        card = self._cards[self._index]
+        self._index += 1
+        return card

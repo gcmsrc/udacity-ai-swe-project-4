@@ -1,21 +1,16 @@
-"""Context class for the Strategy pattern — holds and executes a quiz strategy."""
+"""Context class for the Strategy pattern — holds and swaps a quiz strategy."""
 
-from utils.models import Flashcard
 from utils.strategies.base import QuizMode
 
 
 class GamePlanner:
-    """Context that delegates card ordering to a :class:`QuizMode` strategy.
+    """Context that holds a :class:`QuizMode` strategy and allows swapping it.
 
-    The strategy can be swapped at any time via :meth:`set_strategy`.
+    The strategy is passed to :class:`~utils.quiz_engine.QuizEngine` for
+    execution. Session lifecycle (create / save) is handled at a higher level.
     """
 
     def __init__(self, strategy: QuizMode) -> None:
-        """Initialise with an initial strategy.
-
-        Args:
-            strategy: the ordering strategy to use.
-        """
         self._strategy = strategy
 
     def set_strategy(self, strategy: QuizMode) -> None:
@@ -26,13 +21,7 @@ class GamePlanner:
         """
         self._strategy = strategy
 
-    def plan(self, cards: list[Flashcard]) -> list[Flashcard]:
-        """Order *cards* using the current strategy.
-
-        Args:
-            cards: the full deck to order.
-
-        Returns:
-            A (possibly re-ordered) list of the same cards.
-        """
-        return self._strategy.order(cards)
+    @property
+    def strategy(self) -> QuizMode:
+        """The active strategy."""
+        return self._strategy

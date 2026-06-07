@@ -20,11 +20,11 @@ class DatabaseConnection:
     """
 
     _instance: "DatabaseConnection | None" = None
+    _conn: sqlite3.Connection | None = None
 
     def __new__(cls) -> "DatabaseConnection":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._conn: sqlite3.Connection | None = None
         return cls._instance
 
     # ------------------------------------------------------------------
@@ -51,11 +51,18 @@ class DatabaseConnection:
             self._conn.close()
             self._conn = None
 
+    @classmethod
+    def _reset(cls) -> None:
+        """Reset the singleton — for use in tests only."""
+        cls._instance = None
+
     # ------------------------------------------------------------------
     # Query execution
     # ------------------------------------------------------------------
 
-    def execute(self, query: str, params: tuple = ()) -> list[dict]:
+    def execute(
+        self, query: str, params: tuple[object, ...] = ()
+    ) -> list[dict[str, object]]:
         """Execute a parameterised query and return rows as plain dicts.
 
         Parameterised queries (``?`` placeholders) are used throughout to
@@ -83,14 +90,12 @@ class DatabaseConnection:
 
     def _create_schema(self) -> None:
         assert self._conn is not None
-        self._conn.executescript(
-            """
+        self._conn.executescript("""
             CREATE TABLE IF NOT EXISTS sessions (
                 id         TEXT PRIMARY KEY,
                 dataset    TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 result     TEXT
             );
-            """
-        )
+            """)
         self._conn.commit()

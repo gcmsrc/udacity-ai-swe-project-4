@@ -7,6 +7,17 @@ from datetime import datetime, timezone
 from utils.db.connection import DatabaseConnection
 from utils.models import SessionResult
 
+_SQL_INSERT_SESSION = (
+    "INSERT INTO sessions (id, dataset, created_at, result) VALUES (?, ?, ?, NULL)"
+)
+_SQL_UPDATE_RESULT = "UPDATE sessions SET result = ? WHERE id = ?"
+_SQL_GET_LAST_RESULT = """
+    SELECT result FROM sessions
+     WHERE dataset = ? AND result IS NOT NULL
+     ORDER BY created_at DESC
+     LIMIT 1
+    """
+
 
 class SessionRepository:
     """Persists quiz sessions and their results to the database.
@@ -38,10 +49,7 @@ class SessionRepository:
         """
         session_id = str(uuid.uuid4())
         created_at = datetime.now(timezone.utc).isoformat()
-        self.db.execute(
-            "INSERT INTO sessions (id, dataset, created_at, result) VALUES (?, ?, ?, NULL)",
-            (session_id, dataset, created_at),
-        )
+        self.db.execute(_SQL_INSERT_SESSION, (session_id, dataset, created_at))
         return session_id
 
     def save_session_result(self, session_id: str, result: SessionResult) -> None:
@@ -54,13 +62,7 @@ class SessionRepository:
         Raises:
             sqlite3.OperationalError: if the database cannot be accessed.
         """
-        payload = json.dumps(
-            {"total": result.total, "correct": result.correct, "missed": result.missed}
-        )
-        self.db.execute(
-            "UPDATE sessions SET result = ? WHERE id = ?",
-            (payload, session_id),
-        )
+        self.db.execute(_SQL_UPDATE_RESULT, (result.to_json(), session_id))
 
     def get_missed_cards(self, dataset: str) -> list[str]:
         """Return the missed card fronts from the most recent session for this dataset.
@@ -75,19 +77,8 @@ class SessionRepository:
         Raises:
             sqlite3.OperationalError: if the database cannot be accessed.
         """
-        rows = self.db.execute(
-            """
-            SELECT result FROM sessions
-             WHERE dataset = ? AND result IS NOT NULL
-             ORDER BY created_at DESC
-             LIMIT 1
-            """,
-            (dataset,),
-        )
+        rows = self.db.execute(_SQL_GET_LAST_RESULT, (dataset,))
         if not rows:
             return []
-        return json.loads(rows[0]["result"]).get("missed", [])
-
-    def close(self) -> None:
-        """Commit and close the underlying database connection."""
-        self.db.disconnect()
+        result_data: dict[str, object] = json.loads(rows[0]["result"])
+        return list(result_data.get("missed", []))

@@ -7,13 +7,17 @@ from utils.strategies.base import QuizMode
 class SequentialStrategy(QuizMode):
     """Return cards in the same order they appear in the deck."""
 
-    def order(self, cards: list[Flashcard]) -> list[Flashcard]:
-        """Return a copy of *cards* in their original order.
+    def __init__(self) -> None:
+        self._cards: list[Flashcard] = []
+        self._index: int = 0
 
-        Args:
-            cards: the full deck to order.
+    def setup(self, cards: list[Flashcard]) -> None:
+        self._cards = list(cards)
+        self._index = 0
 
-        Returns:
-            A new list containing the same cards in the same order.
-        """
-        return list(cards)
+    def get_next_card(self) -> Flashcard | None:
+        if self._index >= len(self._cards):
+            return None
+        card = self._cards[self._index]
+        self._index += 1
+        return card

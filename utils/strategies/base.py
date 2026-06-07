@@ -7,12 +7,27 @@ class QuizMode(ABC):
     """Contract for all quiz-ordering strategies."""
 
     @abstractmethod
-    def order(self, cards: list[Flashcard]) -> list[Flashcard]:
-        """Return cards in the order they should be presented.
+    def setup(self, cards: list[Flashcard]) -> None:
+        """Initialise the strategy with the full deck before the session starts.
 
         Args:
-            cards: the full deck to order.
+            cards: the deck to present during this session.
+        """
+
+    @abstractmethod
+    def get_next_card(self) -> Flashcard | None:
+        """Return the next card to present, or None when the session is complete.
 
         Returns:
-            A (possibly re-ordered) list of the same cards.
+            The next :class:`Flashcard`, or ``None`` if all draws are exhausted.
+        """
+
+    def record_result(self, card: Flashcard, correct: bool) -> None:  # noqa: ARG002
+        """Feed back the result of the last answer.
+
+        No-op for strategies that do not adapt to user performance.
+
+        Args:
+            card: the card that was just answered.
+            correct: whether the user's answer was correct.
         """

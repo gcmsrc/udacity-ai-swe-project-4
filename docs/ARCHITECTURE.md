@@ -262,11 +262,15 @@ class DatabaseConnection:
     def disconnect(self) -> None:
         """Commit and close the connection."""
 
-    def execute(self, query: str, params: tuple = ()) -> list[dict]:
+    def execute(self, query: str, params: tuple[object, ...] = ()) -> list[dict[str, object]]:
         """Execute a query and return rows as dicts."""
+
+    @classmethod
+    def _reset(cls) -> None:
+        """Reset the singleton — for use in tests only."""
 ```
 
-Only one instance is ever created (see Singleton pattern in §2). Call `connect()` once at application startup (in `main.py`) and `disconnect()` at shutdown.
+Only one instance is ever created (see Singleton pattern in §2). Call `connect()` once at application startup (in `main.py`) and `disconnect()` at shutdown. `disconnect()` is called exclusively by `main.py`; `SessionRepository` does not own the connection lifecycle.
 
 ### `SessionRepository` (`utils/db/session_repository.py`)
 ```python
@@ -276,31 +280,27 @@ class SessionRepository:
     def create_session(self, dataset: str) -> str:
         """Create a new session row and return its UUID."""
 
-    def save_result(self, session_id: str, card_front: str, correct: bool) -> None:
-        """Persist a single card result for the given session."""
+    def save_session_result(self, session_id: str, result: SessionResult) -> None:
+        """Persist the completed session result as a JSON blob."""
 
     def get_missed_cards(self, dataset: str) -> list[str]:
-        """Return card fronts the user got wrong in any prior session for this dataset."""
+        """Return card fronts the user got wrong in the most recent session for this dataset."""
 ```
 
-`SessionRepository` takes a `DatabaseConnection` via constructor injection, which keeps it testable: tests pass an in-memory connection without touching the singleton.
+`SessionRepository` takes a `DatabaseConnection` via constructor injection, which keeps it testable: tests pass a tmp-path connection without touching the singleton.
 
 #### Database Schema
 
 ```sql
 CREATE TABLE IF NOT EXISTS sessions (
-    id        TEXT PRIMARY KEY,   -- UUID4
-    dataset   TEXT NOT NULL,      -- path or name of the JSON deck
-    created_at TEXT NOT NULL      -- ISO-8601 timestamp
-);
-
-CREATE TABLE IF NOT EXISTS card_results (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id TEXT NOT NULL REFERENCES sessions(id),
-    card_front TEXT NOT NULL,
-    correct    INTEGER NOT NULL   -- 1 = correct, 0 = incorrect
+    id         TEXT PRIMARY KEY,   -- UUID4
+    dataset    TEXT NOT NULL,      -- path or name of the JSON deck
+    created_at TEXT NOT NULL,      -- ISO-8601 timestamp
+    result     TEXT                -- JSON blob, NULL until the session completes
 );
 ```
+
+The completed `SessionResult` (total, correct, missed) is stored as a JSON blob in the `result` column. This keeps the schema simple and avoids a separate `card_results` table.
 
 ---
 
@@ -331,8 +331,8 @@ class SpacedRepetitionStrategy(QuizMode):
 
 Session tracking is already wired in via `utils/db/`. To extend persistence (e.g. track response time per card):
 
-1. Add a column to `card_results` in the schema (migration or recreation).
-2. Update `SessionRepository.save_result()` to accept and store the new field.
+1. Add a field to `SessionResult` in `utils/models/`.
+2. Update `SessionResult.to_json()` (via `dataclasses.asdict`) to include the new field automatically.
 3. Update `QuizEngine` to capture and pass the new data.
 
 No strategy or UI code needs to change.
