@@ -181,7 +181,76 @@ from .adaptive import AdaptiveStrategy
 
 ---
 
-## 5. Key Interfaces
+## 5. CLI Entry Point (`main.py`)
+
+`main.py` hosts a **Typer** application that is the single entry point for the flashcard quiz. It wires CLI arguments to the internal modules and handles errors before they reach the user as raw tracebacks.
+
+### Invocation
+
+```bash
+# via Python
+python main.py DECK_FILE [--mode sequential|random|adaptive]
+
+# via installed script (registered in pyproject.toml)
+flashcard DECK_FILE [--mode sequential|random|adaptive]
+```
+
+### Arguments and Options
+
+| Parameter | CLI form | Type | Default | Description |
+|---|---|---|---|---|
+| `deck_file` | positional argument | `Path` | required | Path to the JSON flashcard deck |
+| `mode` | `--mode` | `str` | `sequential` | Quiz mode: `sequential`, `random`, or `adaptive` |
+
+### `pyproject.toml` Script Entry
+
+```toml
+[project.scripts]
+flashcard = "main:app"
+```
+
+This registers the `flashcard` command so the app can be called without `python`.
+
+### Application Flow
+
+```
+main(deck_file, mode)
+  ├── validate mode  ──────────────────────────────► typer.Exit(1) + message on unknown mode
+  ├── load_flashcards(deck_file) → list[Flashcard]  ► typer.Exit(1) + message on file/parse error
+  ├── DatabaseConnection().connect(db_path)
+  ├── SessionRepository.create_session(deck_file)   → session_id
+  ├── strategy.order(cards)                         → ordered list[Flashcard]
+  ├── QuizEngine(strategy, ui).run(cards)           → SessionResult
+  ├── SessionRepository.save_session_result(session_id, result)
+  ├── ui.show_summary(result)
+  └── DatabaseConnection().disconnect()
+```
+
+### Error Handling
+
+All user-facing errors use `typer.Exit(code=1)` paired with a plain `typer.echo` message. No raw tracebacks are shown. Two categories of error are handled:
+
+| Source | Error | User message |
+|---|---|---|
+| `load_flashcards` | File not found | `"Deck file not found: <path>"` |
+| `load_flashcards` | Invalid JSON / schema | `"Could not read deck: <reason>"` |
+| `main` | Unknown `--mode` value | `"Unknown mode '<value>'. Choose: sequential, random, adaptive."` |
+
+### Mode → Strategy Mapping
+
+```python
+STRATEGIES: dict[str, type[QuizMode]] = {
+    "sequential": SequentialStrategy,
+    "random": RandomStrategy,
+    "adaptive": AdaptiveStrategy,
+}
+```
+
+`main` looks up the mode string in this dict; an unknown key prints the error message and exits before any I/O occurs.
+
+---
+
+## 6. Key Interfaces
 
 ### `Flashcard` (`utils/models/`)
 ```python
@@ -304,7 +373,7 @@ The completed `SessionResult` (total, correct, missed) is stored as a JSON blob 
 
 ---
 
-## 6. Extension Points
+## 7. Extension Points
 
 ### Adding a new quiz mode
 

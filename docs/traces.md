@@ -1913,3 +1913,154 @@ Added `test_show_feedback_wrong_indicates_wrong` which asserts `"Wrong"` appears
 **Claude Response:**
 
 Session logged in `docs/ai_edit_log.md` — covers the UI alternatives design, the Protocol implementation, and the missing wrong-answer test fix.
+
+
+## Session: 2026-06-07 18:48:37 [40a7a945]
+
+**User Request:**
+
+<role>
+Senior Python developer following SOLID principles
+</role>
+<task>
+Update the architecture document to include integration of a `typer` app in the main.py file to handle the CLI interface.
+</task>
+
+<architecture_decisions>
+Please refer to the documentation for typer:
+https://typer.tiangolo.com/tutorial/typer-app/
+
+Here you can find information on how to handle the CLI arguments:
+https://typer.tiangolo.com/tutorial/first-steps/
+
+You can use `python main.py` but also directly have an app called "flashcard" that will be called with `flashcard ...`
+
+The arguments for the users to select should be:
+* the path to the deck file
+* the quiz mode (sequential, random, adaptive) - with sequential being the default option
+
+The app should be able to:
+* Load the deck file
+* Select the quiz mode
+* Run the quiz
+* Show the summary
+
+The app should be able to handle errors gracefully and show a friendly message to the user.
+
+
+</architecture_decisions>
+
+<deliverables>
+Update the ARCHITECTURE.md document to reflect the new changes.
+</deliverables>
+
+**Claude Response:**
+
+Done. Added **Section 5: CLI Entry Point (`main.py`)** covering:
+
+- Both invocation forms (`python main.py` and `flashcard ...`)
+- The positional `deck_file` argument and `--mode` option with `sequential` as default
+- The `pyproject.toml` script entry that registers the `flashcard` command
+- A step-by-step application flow diagram
+- The error-handling strategy (all errors become `typer.Exit(1)` + plain message)
+- The mode → strategy mapping dict
+
+The old sections 5 and 6 are now 6 and 7.
+
+
+## Session: 2026-06-07 18:50:53 [40a7a945]
+
+**User Request:**
+
+<command-message>log-session</command-message>
+<command-name>/log-session</command-name>
+
+**Claude Response:**
+
+Session logged. Appended entry to `docs/ai_edit_log.md` summarising the addition of Section 5 (CLI Entry Point) to `ARCHITECTURE.md`.
+
+
+## Session: 2026-06-07 18:59:38 [f8eb3247]
+
+**User Request:**
+
+<role>
+Senior Python developer implementing planned architecture
+</role>
+
+<task>
+Implement the typer app in the main.py file to handle the CLI interface.
+</task>
+
+<context>
+You are implementing code that was specified in @docs/ARCHITECTURE.md
+</context>
+
+<interface_specification>
+A senior developer implemented a high-level interface and testing for the typer app. You need to build the actual implementation (as many things are not implemented yet)
+</interface_specification>
+
+<requirements>
+<functionality>
+- The app should be able to load the deck file using the CardsDataLoader class
+- The app should be able to select the quiz mode using the QuizMode class
+- The app should be able to run the quiz using the QuizEngine class
+- The app should be able to handle the interaction via the UI class (TerminalUI by default)
+- The app should be able to show the summary using the UI class
+</functionality>
+
+<error_handling>
+We should handle the following errors:
+* Issues with the deck file (handled by the CardsDataLoader class)
+* Issues with the quiz mode (specified by the user, otherwise we use the default mode) (handled by the QuizMode class)
+</error_handling>
+
+<code_quality>
+- Comprehensive module and class docstrings
+- Method docstrings with Args, Returns, Raises sections
+- Full type hints on all signatures
+</code_quality>
+</requirements>
+
+<testing>
+Update the testing accordingly.
+</testing>
+
+<constraints>
+- Python standard library only
+- Follow PEP 8 style guide
+- Ok to inite sqlite3
+</constraints>
+
+<deliverables>
+Provide:
+- The implementation of the main.py file
+- The tests for the main.py file
+- Provide a summary of the changes you did inside docs/code-generation/typer/implementation_summary.md`
+</deliverables>
+
+**Claude Response:**
+
+All 88 tests pass. Here's what was implemented:
+
+**`utils/data_loader/data_loader.py`** — implemented `load_flashcards`: resolves the path, delegates to `CardsDataLoader`, and converts `FileNotFoundError` / `ValueError` into `typer.echo` + `typer.Exit(1)`.
+
+**`main.py`** — implemented `quiz()`:
+1. Mode validation via `get_strategy(mode)` — exits 1 on unknown mode
+2. `load_flashcards(deck)` — exits 1 on any file/parse error
+3. Opens a `DatabaseConnection` at `flashcards.db` next to `main.py`
+4. Creates a session, runs `QuizEngine`, saves result, shows summary, disconnects
+
+**`tests/main/test_main.py`** — 10 tests using `CliRunner` covering all 4 error paths (unknown mode, missing file, invalid JSON, empty deck) and 6 happy-path assertions (all 3 modes succeed, score/missed printed, result persisted to DB).
+
+
+## Session: 2026-06-07 19:01:09 [f8eb3247]
+
+**User Request:**
+
+<command-message>log-session</command-message>
+<command-name>/log-session</command-name>
+
+**Claude Response:**
+
+Session logged. The new entry at the top of the file covers the implementation of `load_flashcards`, the full `main.py` `quiz` command, 10 new tests in `tests/main/test_main.py`, and the summary doc — all 88 tests passing.

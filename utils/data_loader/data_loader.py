@@ -9,6 +9,8 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
+import typer
+
 from utils.models import Flashcard
 
 _WRAPPED_KEY = "cards"
@@ -126,7 +128,25 @@ class CardsDataLoader:
 def load_flashcards(path: Path) -> list[Flashcard]:
     """Load and validate a JSON deck (CLI-facing wrapper).
 
-    .. note::
-        Not yet implemented — will be completed in the next step.
+    Delegates to :class:`CardsDataLoader` and converts any exception into a
+    user-friendly :class:`typer.Exit`.
+
+    Args:
+        path: Path to the JSON deck file (may be relative; resolved to absolute
+              before loading).
+
+    Returns:
+        Non-empty list of :class:`~utils.models.Flashcard` objects.
+
+    Raises:
+        typer.Exit: with code 1 on any load error, after printing a message.
     """
-    raise NotImplementedError
+    loader = CardsDataLoader()
+    try:
+        return loader.load(path.resolve())
+    except FileNotFoundError:
+        typer.echo(f"Deck file not found: {path}")
+        raise typer.Exit(code=1)
+    except ValueError as exc:
+        typer.echo(f"Could not read deck: {exc}")
+        raise typer.Exit(code=1)

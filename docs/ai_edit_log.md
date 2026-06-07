@@ -217,3 +217,23 @@
 **Prompt/Request:** /log-session invoked immediately after the linter modified `test_strategies.py`.  
 
 **AI Response:** No code was generated this turn. A linter added `match="call setup() before get_next_card()"` to `test_random_get_next_card_before_setup_raises` in `test_strategies.py`, tightening the `pytest.raises` assertion to verify the exact error message alongside the exception type.  
+
+## Session: 2026-06-07 19:00:48 (id: f8eb3247-874b-4c9b-b82c-cc2287b81cb6)
+
+**Context:** Implement the Typer CLI entry point in `main.py`, wiring together the data loader, strategy, quiz engine, UI, and session persistence layers.  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** Asked Claude to implement the `quiz` Typer command in `main.py` (replacing the `NotImplementedError` stub), implement the `load_flashcards` CLI wrapper in `utils/data_loader/data_loader.py`, write a full test suite for `main.py`, and produce an implementation summary.  
+
+**AI Response:** Implemented `load_flashcards` in `data_loader.py` — resolves the path to absolute, delegates to `CardsDataLoader`, and converts `FileNotFoundError` / `ValueError` into `typer.echo` + `typer.Exit(1)`. Rewrote `main.py` with a fully working `quiz` command: validates the mode via `get_strategy` (exits 1 on unknown mode), loads the deck, opens a `DatabaseConnection` at `flashcards.db`, creates a session via `SessionRepository`, runs `QuizEngine` with `TerminalUI`, persists the result, prints the summary, and disconnects. Created `tests/main/__init__.py` and `tests/main/test_main.py` with 10 tests using `typer.testing.CliRunner`: 4 error-path tests (unknown mode, missing file, invalid JSON, empty deck) and 6 happy-path tests (all 3 modes succeed, score and missed cards printed, `save_session_result` called with correct args) — DB and engine patched at the `main` module boundary. Created `docs/code-generation/typer/implementation_summary.md`. All 88 tests pass.  
+
+## Session: 2026-06-07 18:50:32 (id: 40a7a945-ba34-4dbe-9fcc-cd36f8f8429f)
+
+**Context:** Update the architecture document to describe how `main.py` integrates the Typer CLI, including arguments, invocation forms, application flow, and error handling.  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** Acting as a senior Python developer following SOLID principles, asked Claude to update `docs/ARCHITECTURE.md` to document the Typer app in `main.py`: the `deck_file` positional argument and `--mode` option (default `sequential`), both `python main.py` and `flashcard ...` invocation forms, the `pyproject.toml` script entry, the end-to-end application flow from CLI args through to `ui.show_summary()`, and graceful error handling via `typer.Exit(1)`.  
+
+**AI Response:** Added a new **Section 5: CLI Entry Point (`main.py`)** to `docs/ARCHITECTURE.md`, covering: invocation forms, an arguments/options table, the `pyproject.toml` `[project.scripts]` entry, a step-by-step application flow diagram showing the call chain from `main()` through `load_flashcards`, `DatabaseConnection`, `SessionRepository`, `strategy.order`, `QuizEngine.run`, `save_session_result`, and `ui.show_summary`, an error-handling table mapping error source to user message, and the `STRATEGIES` dict pattern for mode-to-strategy mapping. The old sections 5 and 6 (Key Interfaces and Extension Points) were renumbered to 6 and 7.
