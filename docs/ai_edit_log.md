@@ -108,6 +108,16 @@
 
 **AI Response:** Advised against both changes. Explained that `GamePlanner` already receives a validated `QuizMode` instance so there is nothing to test for unknown modes at that layer — invalid strings are caught upstream by `get_strategy`, which already has a dedicated test. Moving validation into `GamePlanner` would couple the context class to the registry (mixing concerns), and inlining `GamePlanner` into `__init__.py` would overload that file. No code changes were made.  
 
+## Session: 2026-06-07 15:07:33 (id: 38ed8ff1-446c-4d18-8e82-9bf7c7d34708)
+
+**Context:** Update the architecture document to integrate session-based progress tracking and a singleton database connection.  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** Acting as a senior Python developer following SOLID principles, asked Claude to update `docs/ARCHITECTURE.md` to reflect a new `utils/db/` layer that: assigns a UUID to each session, persists per-card correct/incorrect results in a database, and provides a singleton `DatabaseConnection` class with `connect`, `disconnect`, and `execute` methods. The Adaptive strategy should be able to query prior missed cards from the database.  
+
+**AI Response:** Updated `docs/ARCHITECTURE.md` across all sections: added `utils/db/` to the Module Overview table; added a new Singleton Pattern subsection in Design Patterns explaining `DatabaseConnection`, its `_instance` guard, and why a class over a module global; extended the Module Dependency Diagram to show `utils/db/` wired into `main.py` and a separate flow showing `AdaptiveStrategy` reading missed cards from the DB; updated the data-flow diagram to include `create_session()` and `save_results()` steps; added `utils/db/` sub-package to the folder structure (`connection.py`, `session_repository.py`) and a matching `tests/db/` directory; added `DatabaseConnection` and `SessionRepository` key interfaces with full method signatures and the SQLite schema (`sessions` and `card_results` tables); updated Extension Points with two new sections covering how to add fields to session persistence and how to swap the database backend.  
+
 ## Session: 2026-06-07 11:28:42 (id: 2421221f-7cbf-4989-8389-5c6eba91c63e)
 
 **Context:** Scaffold the full repository structure, implement stubs, and create all failing (red) tests as the first step of a Red-Green-Refactor cycle.  

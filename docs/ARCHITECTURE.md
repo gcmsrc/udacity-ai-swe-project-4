@@ -9,6 +9,7 @@
 | `utils/strategies/` | `QuizMode` ABC + Sequential / Random / Adaptive implementations |
 | `utils/quiz_engine/` | Runs the quiz loop; owns answer-checking and score tracking |
 | `utils/ui/` | All terminal I/O: prompts, feedback, summary table |
+| `utils/db/` | Singleton DB connection; session creation and result persistence |
 | `main.py` | Typer app; wires CLI args → data loader → strategy → engine → ui |
 
 ---
@@ -41,6 +42,30 @@ Three concrete strategies subclass it:
 **Why Strategy here?**  
 Each mode is a different algorithm for *ordering* the same deck. Swapping modes at runtime (from a CLI flag) maps directly to choosing a strategy object. Adding "Spaced Repetition" later means subclassing `QuizMode` — nothing else changes.
 
+### Singleton Pattern — Database Connection
+
+`DatabaseConnection` is a **Singleton** that manages the single SQLite connection for the process lifetime. The class-level `_instance` guard ensures only one connection is ever opened, regardless of how many modules import the class.
+
+```python
+class DatabaseConnection:
+    _instance: "DatabaseConnection | None" = None
+
+    def __new__(cls) -> "DatabaseConnection":
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def connect(self, db_path: Path) -> None: ...
+    def disconnect(self) -> None: ...
+    def execute(self, query: str, params: tuple = ()) -> list[dict]: ...
+```
+
+**Why Singleton here?**  
+Opening a new database connection per module or per call would waste resources and risk connection-state inconsistencies. A singleton keeps connection lifecycle explicit and testable: tests can call `connect()` with an in-memory path, exercise the full stack, then `disconnect()`.
+
+**Why not a module-level global?**  
+A singleton class exposes a clear interface (`connect`, `disconnect`, `execute`), can be sub-classed for testing (e.g. an in-memory variant), and signals intent better than an undeclared module-level variable.
+
 ### Data Classes — Models
 
 Plain `dataclass` objects carry data between layers. No business logic lives in models.
@@ -62,18 +87,31 @@ main.py
   │       ├── utils/models/
   │       └── utils/strategies/
   │
-  └── utils/ui/            (I/O only, no business logic)
-          └── utils/models/
+  ├── utils/ui/            (I/O only, no business logic)
+  │       └── utils/models/
+  │
+  └── utils/db/            (session creation and result persistence)
+          ├── utils/models/
+          └── DatabaseConnection (singleton)
 ```
 
 Data flow:
 
 ```
 JSON file
-  → data_loader.load()  → list[Flashcard]
-  → strategy.order()    → list[Flashcard] (ordered)
-  → quiz_engine.run()   → SessionResult
-  → ui.show_summary()   → terminal output
+  → data_loader.load()        → list[Flashcard]
+  → db.create_session()       → session_id (UUID)
+  → strategy.order()          → list[Flashcard] (ordered)
+  → quiz_engine.run()         → SessionResult
+  → db.save_results()         → persisted to SQLite
+  → ui.show_summary()         → terminal output
+```
+
+The `AdaptiveStrategy` additionally reads prior-session results from the database at ordering time:
+
+```
+db.get_missed_cards(dataset)  → list[str]   (fronts the user got wrong before)
+  → adaptive.order()          → missed cards first, rest appended
 ```
 
 ---
@@ -102,9 +140,13 @@ submission/
 │   ├── quiz_engine/
 │   │   ├── __init__.py              # exports: QuizEngine
 │   │   └── quiz_engine.py
-│   └── ui/
-│       ├── __init__.py              # exports: UI
-│       └── ui.py
+│   ├── ui/
+│   │   ├── __init__.py              # exports: UI
+│   │   └── ui.py
+│   └── db/
+│       ├── __init__.py              # exports: DatabaseConnection, SessionRepository
+│       ├── connection.py            # DatabaseConnection singleton
+│       └── session_repository.py   # session creation and result persistence
 ├── tests/
 │   ├── __init__.py
 │   ├── data_loader/
@@ -116,9 +158,12 @@ submission/
 │   ├── quiz_engine/
 │   │   ├── __init__.py
 │   │   └── test_quiz_engine.py
-│   └── ui/
+│   ├── ui/
+│   │   ├── __init__.py
+│   │   └── test_ui.py
+│   └── db/
 │       ├── __init__.py
-│       └── test_ui.py
+│       └── test_session_repository.py
 ├── docs/
 │   └── ARCHITECTURE.md              # this file
 └── requirements.txt
@@ -206,6 +251,57 @@ class QuizEngine:
     def run(self, cards: list[Flashcard]) -> SessionResult: ...
 ```
 
+### `DatabaseConnection` (`utils/db/connection.py`)
+```python
+class DatabaseConnection:
+    """Singleton managing the SQLite connection for the process lifetime."""
+
+    def connect(self, db_path: Path) -> None:
+        """Open the connection; create schema if the file is new."""
+
+    def disconnect(self) -> None:
+        """Commit and close the connection."""
+
+    def execute(self, query: str, params: tuple = ()) -> list[dict]:
+        """Execute a query and return rows as dicts."""
+```
+
+Only one instance is ever created (see Singleton pattern in §2). Call `connect()` once at application startup (in `main.py`) and `disconnect()` at shutdown.
+
+### `SessionRepository` (`utils/db/session_repository.py`)
+```python
+class SessionRepository:
+    def __init__(self, db: DatabaseConnection) -> None: ...
+
+    def create_session(self, dataset: str) -> str:
+        """Create a new session row and return its UUID."""
+
+    def save_result(self, session_id: str, card_front: str, correct: bool) -> None:
+        """Persist a single card result for the given session."""
+
+    def get_missed_cards(self, dataset: str) -> list[str]:
+        """Return card fronts the user got wrong in any prior session for this dataset."""
+```
+
+`SessionRepository` takes a `DatabaseConnection` via constructor injection, which keeps it testable: tests pass an in-memory connection without touching the singleton.
+
+#### Database Schema
+
+```sql
+CREATE TABLE IF NOT EXISTS sessions (
+    id        TEXT PRIMARY KEY,   -- UUID4
+    dataset   TEXT NOT NULL,      -- path or name of the JSON deck
+    created_at TEXT NOT NULL      -- ISO-8601 timestamp
+);
+
+CREATE TABLE IF NOT EXISTS card_results (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    card_front TEXT NOT NULL,
+    correct    INTEGER NOT NULL   -- 1 = correct, 0 = incorrect
+);
+```
+
 ---
 
 ## 6. Extension Points
@@ -231,4 +327,16 @@ class SpacedRepetitionStrategy(QuizMode):
         return sorted(cards, key=lambda c: self.due_dates.get(c.front, today))
 ```
 
-Adding persistence (e.g. saving missed cards across sessions) only requires a new module inside `utils/` — the engine and strategies remain untouched.
+### Adding session persistence
+
+Session tracking is already wired in via `utils/db/`. To extend persistence (e.g. track response time per card):
+
+1. Add a column to `card_results` in the schema (migration or recreation).
+2. Update `SessionRepository.save_result()` to accept and store the new field.
+3. Update `QuizEngine` to capture and pass the new data.
+
+No strategy or UI code needs to change.
+
+### Swapping the database backend
+
+Replace `DatabaseConnection` with a subclass that wraps a different backend (e.g. PostgreSQL via `psycopg2`). Because `SessionRepository` depends only on the `DatabaseConnection` interface, all repository code works without modification.

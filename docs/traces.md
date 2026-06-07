@@ -1067,3 +1067,64 @@ The gap, if anything, is that `get_strategy` already has a test for unknown mode
 **Claude Response:**
 
 Session logged — a short design-discussion entry noting the question, the reasoning, and that no code was changed.
+
+
+## Session: 2026-06-07 15:06:43 [38ed8ff1]
+
+**User Request:**
+
+<role>
+Senior Python developer following SOLID principles
+</role>
+<task>
+Update the architecture document to integrate a session-based handling to keep track of the users' progress
+</task>
+
+<architecture_decisions>
+It would be important for a user to keep track of her progress over time. To do so, we need to integrate a session-based handling to keep track of the users' progress.
+
+The session-based handling should be able to:
+- Assing a unique identifier to each session
+- Store the user results (correct/incorrect) for each flashcard for a given dataset in a persisted database
+
+This approach would be particularly useful for the Adaptive strategy, where the user should be able to see (more often)the cards that she got wrong in a prior session.
+
+The database connection should be handled by a singleton class that will be used to connect to the database.
+The singleton class should be able to:
+- Connect to the database
+- Disconnect from the database
+- Execute queries
+- Return the results
+</architecture_decisions>
+
+<deliverables>
+Update the ARCHITECTURE.md document to reflect the new changes.
+</deliverables>
+
+**Claude Response:**
+
+The document looks good. Here's a summary of the changes made to `docs/ARCHITECTURE.md`:
+
+1. **Module Overview** — added `utils/db/` row describing the singleton DB connection and session persistence responsibility.
+
+2. **Design Patterns** — added a new **Singleton Pattern** section explaining `DatabaseConnection`, why a singleton over a module-level global, and how it stays testable.
+
+3. **Module Dependency Diagram** — added `utils/db/` as a dependency of `main.py`, extended the data flow to show `create_session()` and `save_results()` steps, and added a separate flow showing how `AdaptiveStrategy` reads prior missed cards from the DB.
+
+4. **File / Folder Structure** — added `utils/db/` package (`connection.py`, `session_repository.py`) and `tests/db/` test directory.
+
+5. **Key Interfaces** — added `DatabaseConnection` and `SessionRepository` interface docs, plus the SQLite schema (`sessions` and `card_results` tables).
+
+6. **Extension Points** — replaced the placeholder sentence with two concrete extension scenarios: adding fields to session persistence and swapping the DB backend.
+
+
+## Session: 2026-06-07 15:07:50 [38ed8ff1]
+
+**User Request:**
+
+<command-message>log-session</command-message>
+<command-name>/log-session</command-name>
+
+**Claude Response:**
+
+Session logged in `docs/ai_edit_log.md` under timestamp `2026-06-07 15:07:33`.
