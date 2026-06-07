@@ -3,6 +3,7 @@
 import json
 import uuid
 from datetime import datetime, timezone
+from typing import cast
 
 from utils.db.connection import DatabaseConnection
 from utils.models import SessionResult
@@ -80,5 +81,6 @@ class SessionRepository:
         rows = self.db.execute(_SQL_GET_LAST_RESULT, (dataset,))
         if not rows:
             return []
-        result_data: dict[str, object] = json.loads(rows[0]["result"])
-        return list(result_data.get("missed", []))
+        result_data: dict[str, object] = json.loads(str(rows[0]["result"]))
+        missed = cast(list[object], result_data.get("missed", []))
+        return [str(m) for m in missed]

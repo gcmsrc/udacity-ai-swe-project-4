@@ -5,6 +5,8 @@ import random
 from utils.models import Flashcard
 from utils.strategies.base import QuizMode
 
+_MISSED_WEIGHT_MULTIPLIER: float = 2.0
+
 
 class AdaptiveStrategy(QuizMode):
     """Present cards using weighted random draws.
@@ -15,18 +17,22 @@ class AdaptiveStrategy(QuizMode):
     """
 
     def __init__(self) -> None:
-        self._cards: list[Flashcard] = []
+        self._cards: list[Flashcard] | None = None
+        self._card_index: dict[str, int] = {}
         self._weights: list[float] = []
         self._drawn: int = 0
         self._total: int = 0
 
     def setup(self, cards: list[Flashcard]) -> None:
         self._cards = list(cards)
+        self._card_index = {c.front: i for i, c in enumerate(cards)}
         self._weights = [1.0] * len(cards)
         self._drawn = 0
         self._total = len(cards)
 
     def get_next_card(self) -> Flashcard | None:
+        if self._cards is None:
+            raise RuntimeError("call setup() before get_next_card()")
         if self._drawn >= self._total:
             return None
         self._drawn += 1
@@ -34,5 +40,7 @@ class AdaptiveStrategy(QuizMode):
 
     def record_result(self, card: Flashcard, correct: bool) -> None:
         if not correct:
-            idx = next(i for i, c in enumerate(self._cards) if c.front == card.front)
-            self._weights[idx] *= 2.0
+            if card.front not in self._card_index:
+                raise ValueError(f"Card '{card.front}' not found in the current deck")
+            idx = self._card_index[card.front]
+            self._weights[idx] *= _MISSED_WEIGHT_MULTIPLIER

@@ -67,6 +67,12 @@ def test_sequential_does_not_mutate_input(deck: list[Flashcard]) -> None:
     assert deck == original
 
 
+def test_sequential_get_next_card_before_setup_raises() -> None:
+    s = SequentialStrategy()
+    with pytest.raises(RuntimeError, match=r"call setup\(\) before get_next_card\(\)"):
+        s.get_next_card()
+
+
 # ---------------------------------------------------------------------------
 # RandomStrategy
 # ---------------------------------------------------------------------------
@@ -102,6 +108,12 @@ def test_random_does_not_mutate_input(deck: list[Flashcard]) -> None:
     assert deck == original
 
 
+def test_random_get_next_card_before_setup_raises() -> None:
+    s = RandomStrategy()
+    with pytest.raises(RuntimeError, match=r"call setup\(\) before get_next_card\(\)"):
+        s.get_next_card()
+
+
 # ---------------------------------------------------------------------------
 # AdaptiveStrategy
 # ---------------------------------------------------------------------------
@@ -126,18 +138,35 @@ def test_adaptive_exhausts_after_total_draws(deck: list[Flashcard]) -> None:
     assert s.get_next_card() is None
 
 
-def test_adaptive_doubles_weight_on_miss(deck: list[Flashcard]) -> None:
-    s = AdaptiveStrategy()
-    s.setup(deck)
-    s.record_result(deck[0], correct=False)
-    assert s._weights[0] == 2.0
+def test_adaptive_missed_card_drawn_more_often() -> None:
+    """A missed card accumulates higher weight and is drawn more frequently."""
+    card_a = Flashcard("A", "a")
+    card_b = Flashcard("B", "b")
+    two_card = [card_a, card_b]
+
+    counts: dict[str, int] = {"A": 0, "B": 0}
+    for _ in range(300):
+        s = AdaptiveStrategy()
+        s.setup(two_card)
+        s.record_result(card_a, correct=False)
+        for card in _drain(s):
+            counts[card.front] += 1
+
+    assert counts["A"] > counts["B"]
 
 
-def test_adaptive_correct_answer_does_not_change_weight(deck: list[Flashcard]) -> None:
+def test_adaptive_get_next_card_before_setup_raises() -> None:
+    s = AdaptiveStrategy()
+    with pytest.raises(RuntimeError, match=r"call setup\(\) before get_next_card\(\)"):
+        s.get_next_card()
+
+
+def test_adaptive_record_result_unknown_card_raises(deck: list[Flashcard]) -> None:
     s = AdaptiveStrategy()
     s.setup(deck)
-    s.record_result(deck[0], correct=True)
-    assert s._weights[0] == 1.0
+    unknown = Flashcard("UNKNOWN", "answer")
+    with pytest.raises(ValueError):
+        s.record_result(unknown, correct=False)
 
 
 # ---------------------------------------------------------------------------
@@ -170,11 +199,11 @@ def test_factory_raises_for_unknown_mode() -> None:
 def test_game_planner_exposes_strategy() -> None:
     strategy = SequentialStrategy()
     planner = GamePlanner(strategy)
-    assert planner.strategy is strategy
+    assert planner._strategy is strategy
 
 
 def test_game_planner_set_strategy_replaces_strategy() -> None:
     planner = GamePlanner(SequentialStrategy())
     new_strategy = RandomStrategy()
     planner.set_strategy(new_strategy)
-    assert planner.strategy is new_strategy
+    assert planner._strategy is new_strategy

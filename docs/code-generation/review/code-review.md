@@ -75,5 +75,5 @@ For each issue found:
 For testing, please provide details on uncovered lines of code if test coverage is less than 80%.
 For formatting checks, please provide details on the issues found in a dedicated section.
 
-Save your output in docs/code-generation/db/code-review.md
+Save your output in docs/code-generation/db/code-review-rethink.md
 </output_format>

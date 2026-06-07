@@ -68,7 +68,7 @@ def test_save_session_result_stores_missed_cards(
     rows = db.execute("SELECT result FROM sessions WHERE id = ?", (session_id,))
     import json
 
-    data = json.loads(rows[0]["result"])
+    data = json.loads(str(rows[0]["result"]))
     assert data["missed"] == ["RAM"]
     assert data["total"] == 2
     assert data["correct"] == 1

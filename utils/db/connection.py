@@ -79,7 +79,8 @@ class DatabaseConnection:
             sqlite3.OperationalError: if the query cannot be executed.
             sqlite3.IntegrityError: if a constraint is violated.
         """
-        assert self._conn is not None, "call connect() before execute()"
+        if self._conn is None:
+            raise RuntimeError("call connect() before execute()")
         cursor = self._conn.execute(query, params)
         self._conn.commit()
         return [dict(row) for row in cursor.fetchall()]
@@ -89,7 +90,8 @@ class DatabaseConnection:
     # ------------------------------------------------------------------
 
     def _create_schema(self) -> None:
-        assert self._conn is not None
+        if self._conn is None:
+            raise RuntimeError("call connect() before using the connection")
         self._conn.executescript("""
             CREATE TABLE IF NOT EXISTS sessions (
                 id         TEXT PRIMARY KEY,

@@ -1,10 +1,11 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
 from utils.models import Flashcard, SessionResult
 from utils.quiz_engine import QuizEngine
 from utils.strategies import SequentialStrategy
+from utils.strategies.base import QuizMode
 from utils.ui import UI
 
 
@@ -88,9 +89,61 @@ def test_engine_calls_ui_feedback_for_each_card(
     assert ui.show_feedback.call_count == len(deck)
 
 
-def test_engine_calls_show_summary_once(
-    engine: QuizEngine, deck: list[Flashcard], ui: MagicMock
-) -> None:
+# ---------------------------------------------------------------------------
+# Strategy interaction assertions
+# ---------------------------------------------------------------------------
+
+
+def test_run_calls_strategy_setup_once(deck: list[Flashcard], ui: MagicMock) -> None:
+    strategy = MagicMock(spec=QuizMode)
+    strategy.get_next_card.side_effect = [*deck, None]
     ui.prompt_answer.return_value = "wrong"
+    engine = QuizEngine(strategy=strategy, ui=ui)
     engine.run(deck)
-    ui.show_summary.assert_called_once()
+    strategy.setup.assert_called_once_with(deck)
+
+
+def test_run_calls_get_next_card_until_exhausted(
+    deck: list[Flashcard], ui: MagicMock
+) -> None:
+    strategy = MagicMock(spec=QuizMode)
+    strategy.get_next_card.side_effect = [*deck, None]
+    ui.prompt_answer.return_value = "wrong"
+    engine = QuizEngine(strategy=strategy, ui=ui)
+    engine.run(deck)
+    assert strategy.get_next_card.call_count == len(deck) + 1
+
+
+def test_run_calls_record_result_for_each_card(
+    deck: list[Flashcard], ui: MagicMock
+) -> None:
+    strategy = MagicMock(spec=QuizMode)
+    strategy.get_next_card.side_effect = [*deck, None]
+    ui.prompt_answer.return_value = "wrong"
+    engine = QuizEngine(strategy=strategy, ui=ui)
+    engine.run(deck)
+    assert strategy.record_result.call_count == len(deck)
+
+
+def test_run_calls_record_result_with_correct_flag(
+    deck: list[Flashcard], ui: MagicMock
+) -> None:
+    strategy = MagicMock(spec=QuizMode)
+    strategy.get_next_card.side_effect = [deck[0], deck[1], None]
+    answers = {"CPU": "Central Processing Unit", "RAM": "wrong"}
+    ui.prompt_answer.side_effect = lambda card: answers[card.front]
+    engine = QuizEngine(strategy=strategy, ui=ui)
+    engine.run(deck)
+    strategy.record_result.assert_any_call(deck[0], True)
+    strategy.record_result.assert_any_call(deck[1], False)
+
+
+def test_run_does_not_call_show_summary(
+    deck: list[Flashcard], ui: MagicMock
+) -> None:
+    strategy = MagicMock(spec=QuizMode)
+    strategy.get_next_card.side_effect = [*deck, None]
+    ui.prompt_answer.return_value = "wrong"
+    engine = QuizEngine(strategy=strategy, ui=ui)
+    engine.run(deck)
+    ui.show_summary.assert_not_called()

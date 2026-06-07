@@ -21,7 +21,3 @@ class GamePlanner:
         """
         self._strategy = strategy
 
-    @property
-    def strategy(self) -> QuizMode:
-        """The active strategy."""
-        return self._strategy

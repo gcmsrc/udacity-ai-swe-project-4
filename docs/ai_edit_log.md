@@ -177,3 +177,33 @@
 **Prompt/Request:** Asked Claude to build the project layout defined in `docs/ARCHITECTURE.md`: create all sub-packages under `utils/` and `tests/`, write stub implementations that raise `NotImplementedError`, and write test cases for every public interface — all tests must fail when run.  
 
 **AI Response:** Created `pyproject.toml` (uv-compatible, with pytest config), `data/sample_cards.json` (5 sample cards), and the full `utils/` sub-package tree: `models/models.py` (`Flashcard`, `SessionResult` dataclasses — fully implemented), `data_loader/data_loader.py` (`load_flashcards` stub), `strategies/base.py` (`QuizMode` ABC), `strategies/sequential.py` / `random_strategy.py` / `adaptive.py` (stubs), `quiz_engine/quiz_engine.py` (`QuizEngine` stub), `ui/ui.py` (`UI` stub). Each sub-package has an `__init__.py` re-exporting its public surface. Also wrote `main.py` as a Typer CLI stub. Created 34 tests across `tests/data_loader/`, `tests/strategies/`, `tests/quiz_engine/`, and `tests/ui/`, covering valid/invalid JSON loading, all three strategy ordering behaviours, full quiz-engine session flow, and UI I/O. Running `uv run pytest` yields 26 failed + 8 errors (quiz-engine fixture errors due to `__init__` stub) + 1 pass (`test_quiz_strategy_is_abstract`, which tests ABC enforcement — already correct by design).  
+
+## Session: 2026-06-07 17:46:53 (id: 247811b4-8b59-4fbd-89cb-e611a3500956)
+
+**Context:** Code review of the last commit (`d78ec67 add adaptive strategy`) covering the strategy redesign, `QuizEngine` implementation, and associated `utils/db` carry-over fixes.  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** Asked Claude to run a structured code review on the last git commit using the standard analysis framework (duplication, magic values, type safety, complexity, code smells) plus AI-specific pitfall checks; run black/isort/flake8/mypy; run pytest with coverage; save the output to `docs/code-generation/db/code-review-rethink.md`.  
+
+**AI Response:** Created `docs/code-generation/db/code-review-rethink.md`. All formatting tools pass (black, isort, flake8). Four mypy errors found in `session_repository.py` (lines 83–84) and `test_session_repository.py` (line 71): `execute()` returns `dict[str, object]` so `rows[0]["result"]` is typed as `object`; `json.loads` requires `str | bytes | bytearray` — fix is `json.loads(str(rows[0]["result"]))`. Coverage is 96% overall (7 UI tests failing as expected red-phase stubs). Top findings: (1) `QuizEngine.run()` calls `show_summary()` internally, violating the data-flow sequence in `ARCHITECTURE.md §3` — `main.py` cannot interpose `db.save_session_result()` before the summary prints; (2) `ARCHITECTURE.md` §2 and §5 still document the old `QuizMode.order()` interface and the old adaptive description ("missed cards first") — not updated to reflect `setup()`/`get_next_card()`/`record_result()`; (3) `assert` guards in `connection.py` (lines 82, 92) remain despite being flagged in the previous review; (4) `AdaptiveStrategy.record_result()` raises opaque `StopIteration` if card is not found — should raise `ValueError` or use a pre-built index dict; (5) `GamePlanner` is now vestigial (strategy holder with no behavior); (6) two adaptive tests access private `_weights` directly (test theatre).
+
+## Session: 2026-06-07 17:53:53 (id: b2ff0f07-70fa-4643-b2ca-e0136d4a3ec0)
+
+**Context:** Implement all accepted fixes from the code review of the adaptive strategy and quiz engine (`docs/code-generation/db/code-review-rethink.md`).  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** Given an annotated list of accepted/discarded review findings, implement: extract `_BaseIndexedStrategy` mixin for Sequential/Random; add `_MISSED_WEIGHT_MULTIPLIER` constant to `AdaptiveStrategy`; fix all mypy type-safety issues; remove `show_summary()` from `QuizEngine.run()`; remove the `@property strategy` from `GamePlanner`; replace `assert` guards in `connection.py` with `RuntimeError`; fix `AdaptiveStrategy.record_result()` to raise `ValueError` for unknown cards and `get_next_card()` to raise `RuntimeError` before `setup()`; replace internal-weight tests with a statistical assertion; add edge-case tests for pre-setup guard and unknown card; add `assert_called_once_with` interaction tests for `QuizEngine.run()`.  
+
+**AI Response:** Added `_BaseIndexedStrategy` to `utils/strategies/base.py` (shared `_cards`, `_index`, `get_next_card()` with pre-setup `RuntimeError` guard); simplified `sequential.py` and `random_strategy.py` to only override `setup()`. Rewrote `adaptive.py` with `_MISSED_WEIGHT_MULTIPLIER = 2.0`, a `{front: index}` dict built in `setup()`, `ValueError` on unknown card in `record_result()`, and pre-setup `RuntimeError` in `get_next_card()`. Removed the `@property strategy` from `game_planner.py`. Replaced both `assert self._conn is not None` guards in `connection.py` with `raise RuntimeError(...)`. Fixed `session_repository.py` type errors (`json.loads(str(...))`, `cast(list[object], ...)`, list comprehension). Removed `self._ui.show_summary(result)` from `quiz_engine.py`. In `test_strategies.py`: replaced two internal-weight tests with `test_adaptive_missed_card_drawn_more_often` (300-run statistical assertion), added `_before_setup_raises` tests for all three strategies, added `test_adaptive_record_result_unknown_card_raises`, updated GamePlanner tests to use `._strategy`. In `test_quiz_engine.py`: removed `test_engine_calls_show_summary_once`, added four tests verifying `setup.assert_called_once_with`, `get_next_card` call count, `record_result` call count and args, and `show_summary.assert_not_called`. Fixed `test_session_repository.py` with `json.loads(str(...))`. All 46 tests pass; mypy reports zero errors.
+
+## Session: 2026-06-07 18:00:05 (id: b2ff0f07-70fa-4643-b2ca-e0136d4a3ec0)
+
+**Context:** Post-edit linter tightened a test assertion in `test_strategies.py` after the previous log entry was written.  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** /log-session invoked immediately after the linter modified `test_strategies.py`.  
+
+**AI Response:** No code was generated this turn. A linter added `match="call setup() before get_next_card()"` to `test_random_get_next_card_before_setup_raises` in `test_strategies.py`, tightening the `pytest.raises` assertion to verify the exact error message alongside the exception type.  

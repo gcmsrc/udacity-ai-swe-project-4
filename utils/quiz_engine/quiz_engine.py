@@ -33,6 +33,4 @@ class QuizEngine:
             else:
                 missed.append(card.front)
 
-        result = SessionResult(total=len(cards), correct=correct_count, missed=missed)
-        self._ui.show_summary(result)
-        return result
+        return SessionResult(total=len(cards), correct=correct_count, missed=missed)
