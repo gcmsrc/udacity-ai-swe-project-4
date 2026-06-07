@@ -228,6 +228,16 @@
 
 **AI Response:** Implemented `load_flashcards` in `data_loader.py` — resolves the path to absolute, delegates to `CardsDataLoader`, and converts `FileNotFoundError` / `ValueError` into `typer.echo` + `typer.Exit(1)`. Rewrote `main.py` with a fully working `quiz` command: validates the mode via `get_strategy` (exits 1 on unknown mode), loads the deck, opens a `DatabaseConnection` at `flashcards.db`, creates a session via `SessionRepository`, runs `QuizEngine` with `TerminalUI`, persists the result, prints the summary, and disconnects. Created `tests/main/__init__.py` and `tests/main/test_main.py` with 10 tests using `typer.testing.CliRunner`: 4 error-path tests (unknown mode, missing file, invalid JSON, empty deck) and 6 happy-path tests (all 3 modes succeed, score and missed cards printed, `save_session_result` called with correct args) — DB and engine patched at the `main` module boundary. Created `docs/code-generation/typer/implementation_summary.md`. All 88 tests pass.  
 
+## Session: 2026-06-07 19:14:15 (id: add810c4-aba2-405a-8c4e-113691b66bfd)
+
+**Context:** Extend `AdaptiveStrategy` to reset a previously missed card's weight when it is answered correctly.  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** Update `adaptive.py` so that `record_result` resets a card's draw weight to `1.0` when it is answered correctly (not only increases it on a miss). Add a test verifying weight increases after a miss then resets to `1.0` after a correct answer.  
+
+**AI Response:** Updated `record_result` in `utils/strategies/adaptive.py`: moved the card-not-found guard outside the `if not correct` branch (so unknown cards raise `ValueError` for both correct and incorrect calls), added `self._weights[idx] = 1.0` when `correct=True`, and added a full docstring with Args/Returns/Raises sections. Added `test_adaptive_missed_then_correct_resets_weight` to `tests/strategies/test_strategies.py` (one card, miss → assert weight > 1.0, correct → assert weight == 1.0). A linter also added `test_adaptive_missed_increase_weight_multiple_times` (confirms weight grows on successive misses). All 24 tests pass.  
+
 ## Session: 2026-06-07 18:50:32 (id: 40a7a945-ba34-4dbe-9fcc-cd36f8f8429f)
 
 **Context:** Update the architecture document to describe how `main.py` integrates the Typer CLI, including arguments, invocation forms, application flow, and error handling.  

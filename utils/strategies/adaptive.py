@@ -39,8 +39,23 @@ class AdaptiveStrategy(QuizMode):
         return random.choices(self._cards, weights=self._weights, k=1)[0]
 
     def record_result(self, card: Flashcard, correct: bool) -> None:
-        if not correct:
-            if card.front not in self._card_index:
-                raise ValueError(f"Card '{card.front}' not found in the current deck")
-            idx = self._card_index[card.front]
+        """Record whether a card was answered correctly and update its draw weight.
+
+        A missed card has its weight multiplied by ``_MISSED_WEIGHT_MULTIPLIER``,
+        increasing the probability of it being drawn again.  If the card is later
+        answered correctly its weight is reset to ``1.0``.
+
+        Args:
+            card: The flashcard that was just answered.
+            correct: ``True`` if the answer was correct, ``False`` otherwise.
+
+        Raises:
+            ValueError: If *card* is not part of the current deck.
+        """
+        if card.front not in self._card_index:
+            raise ValueError(f"Card '{card.front}' not found in the current deck")
+        idx = self._card_index[card.front]
+        if correct:
+            self._weights[idx] = 1.0
+        else:
             self._weights[idx] *= _MISSED_WEIGHT_MULTIPLIER

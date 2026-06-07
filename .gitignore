@@ -6,3 +6,6 @@
 
 # Ignore coverage
 .coverage
+
+# Ignore all .db files
+**/*.db

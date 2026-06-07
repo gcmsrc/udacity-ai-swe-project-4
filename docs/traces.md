@@ -2064,3 +2064,70 @@ All 88 tests pass. Here's what was implemented:
 **Claude Response:**
 
 Session logged. The new entry at the top of the file covers the implementation of `load_flashcards`, the full `main.py` `quiz` command, 10 new tests in `tests/main/test_main.py`, and the summary doc — all 88 tests passing.
+
+
+## Session: 2026-06-07 19:10:51 [add810c4]
+
+**User Request:**
+
+<role>
+Senior Python developer implementing planned architecture
+</role>
+
+<task>
+Update the AdaptiveStrategy to update the weight of a previously missed card. If the card is now answered correctly, reset the weight to 1.0
+</task>
+
+<context>
+You are udpating the logic in adapter.py
+</context>
+
+<requirements>
+<functionality>
+- Update the AdaptiveStrategy to update the weight of a previously missed card. If the card is now answered correctly, reset the weight to 1.0
+</functionality>
+
+
+<code_quality>
+- Comprehensive module and class docstrings
+- Method docstrings with Args, Returns, Raises sections
+- Full type hints on all signatures
+</code_quality>
+</requirements>
+
+<testing>
+Add a test where a card is missed, then answered correctly. Check that weight is increased first, then reset to 1.0 when the user answrs correctly to the same card
+</testing>
+
+<constraints>
+- Python standard library only
+- Follow PEP 8 style guide
+- No external dependencies
+</constraints>
+
+<deliverables>
+Update the code in adaptive.py and the associated tests
+</deliverables>
+
+**Claude Response:**
+
+All 23 tests pass. Here's what changed:
+
+**`adaptive.py`** — `record_result` now:
+- Moves the card-not-found guard outside the `if not correct` block (so unknown cards raise `ValueError` on correct answers too)
+- Resets `_weights[idx] = 1.0` when `correct=True`
+- Multiplies the weight as before when `correct=False`
+
+**`test_strategies.py`** — `test_adaptive_missed_then_correct_resets_weight` verifies the weight is `> 1.0` after a miss, then exactly `1.0` after a correct answer on the same card.
+
+
+## Session: 2026-06-07 19:14:31 [add810c4]
+
+**User Request:**
+
+<command-message>log-session</command-message>
+<command-name>/log-session</command-name>
+
+**Claude Response:**
+
+Session logged to `docs/ai_edit_log.md`.

@@ -169,6 +169,33 @@ def test_adaptive_record_result_unknown_card_raises(deck: list[Flashcard]) -> No
         s.record_result(unknown, correct=False)
 
 
+def test_adaptive_missed_increase_weight_multiple_times() -> None:
+    """Weight is increased multiple times after a miss."""
+    card = Flashcard("CPU", "Central Processing Unit")
+    s = AdaptiveStrategy()
+    s.setup([card])
+
+    s.record_result(card, correct=False)
+    current_weight = s._weights[0]
+
+    current_weight = s._weights[0]
+    s.record_result(card, correct=False)
+    assert s._weights[0] > current_weight
+
+
+def test_adaptive_missed_then_correct_resets_weight() -> None:
+    """Weight is raised after a miss and reset to 1.0 after a correct answer."""
+    card = Flashcard("CPU", "Central Processing Unit")
+    s = AdaptiveStrategy()
+    s.setup([card])
+
+    s.record_result(card, correct=False)
+    assert s._weights[0] > 1.0
+
+    s.record_result(card, correct=True)
+    assert s._weights[0] == 1.0
+
+
 # ---------------------------------------------------------------------------
 # get_strategy factory
 # ---------------------------------------------------------------------------

@@ -21,7 +21,7 @@ from utils.ui import TerminalUI
 
 app = typer.Typer(help="CLI flashcard quiz application.")
 
-_DB_PATH = Path(__file__).parent / "flashcards.db"
+_DB_PATH = Path(__file__).parent / "data/flashcards.db"
 
 
 @app.command()
