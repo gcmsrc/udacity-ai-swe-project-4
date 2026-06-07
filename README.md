@@ -13,6 +13,16 @@ A CLI flashcard quiz application built with Python and [Typer](https://typer.tia
 - **Rich terminal UI** — clean prompts and a summary table powered by [Rich](https://github.com/Textualize/rich)
 - **Bundled sample decks** — `data/sample_cards.json` and `data/countries.json` to get started immediately
 
+## Demo
+
+Running a quiz session (without history):
+
+![Flashcard quiz without history](docs/gifs/flashcard-no-history.gif)
+
+Running a quiz session with `--show-history`:
+
+![Flashcard quiz with history](docs/gifs/demo-history.gif)
+
 ## Requirements
 
 - Python 3.11+

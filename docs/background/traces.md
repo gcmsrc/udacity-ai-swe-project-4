@@ -2988,3 +2988,23 @@ The report is complete and coherent. I've filled in `submission/REPORT.md` using
 The instruction was 1,000–1,500 words. The **prose itself is 1,362 words** — within range. The raw `wc -w` reads 1,612 only because it counts the template's fixed scaffolding (section headers, the `**Context:** / **AI Prompt:** / ...` labels repeated across four examples, markdown tables, code identifiers, and `[x]` checkboxes), which aren't prose. I trimmed substantially to keep the prose comfortably inside the limit without dropping any of the high-value content.
 
 One judgment call to flag: I kept all four AI-interaction examples (the template asks for 3–5) since they're the strongest part of your log. If you'd rather hit ≤1,500 on a strict raw word count, the cleanest cut is dropping Example 4 — say the word and I'll remove it.
+
+
+## Session: 2026-06-07 22:22:40 [e749abac]
+
+**User Request:**
+
+can you add the two .gif files in the README.md?
+
+The flashcard-no-history.gif is a gif related to the run (without history)
+
+While the demo-history.gif is for the case when we ask for the history
+
+**Claude Response:**
+
+Done. Added a **Demo** section after Features with both gifs:
+
+- `flashcard-no-history.gif` — a normal run without history
+- `demo-history.gif` — a run with `--show-history`
+
+Both use relative paths (`docs/gifs/...`) so they render on GitHub and locally.
