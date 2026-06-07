@@ -1,5 +1,6 @@
 """Session persistence layer — stores quiz sessions and serialised results."""
 
+import json
 import uuid
 from datetime import datetime, timezone
 
@@ -10,6 +11,11 @@ _SQL_INSERT_SESSION = (
     "INSERT INTO sessions (id, dataset, created_at, result) VALUES (?, ?, ?, NULL)"
 )
 _SQL_UPDATE_RESULT = "UPDATE sessions SET result = ? WHERE id = ?"
+_SQL_GET_HISTORY = (
+    "SELECT result FROM sessions"
+    " WHERE dataset = ? AND result IS NOT NULL"
+    " ORDER BY created_at ASC"
+)
 
 
 class SessionRepository:
@@ -56,3 +62,27 @@ class SessionRepository:
             sqlite3.OperationalError: if the database cannot be accessed.
         """
         self.db.execute(_SQL_UPDATE_RESULT, (result.to_json(), session_id))
+
+    def get_history(self, dataset: str) -> list[float]:
+        """Return the percent-correct of each completed session, oldest first.
+
+        Args:
+            dataset: path or name of the JSON deck.
+
+        Returns:
+            Per-session scores as fractions in [0.0, 1.0], ordered oldest
+            first.  Sessions whose result has not been saved (NULL) are
+            skipped, as are sessions where total is zero.
+
+        Raises:
+            sqlite3.OperationalError: if the database cannot be accessed.
+        """
+        rows = self.db.execute(_SQL_GET_HISTORY, (dataset,))
+        history: list[float] = []
+        for row in rows:
+            data: dict = json.loads(str(row["result"]))
+            total: int = data.get("total", 0)
+            correct: int = data.get("correct", 0)
+            if total > 0:
+                history.append(correct / total)
+        return history

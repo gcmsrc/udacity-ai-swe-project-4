@@ -2530,3 +2530,120 @@ Done. The `--plain-terminal` flag works end-to-end.
 - Full suite: **86 passed**; `mypy --strict` and `flake8` clean.
 
 The architecture doc (§5) already notes the renderer is swappable; want me to update it to document the `--plain-terminal` flag explicitly in the Arguments/Options table?
+
+
+## Session: 2026-06-07 20:54:35 [ad51e68b]
+
+**User Request:**
+
+<role>
+Senior Python developer following SOLID principles
+</role>
+<task>
+Update the ARCHITECURE.md to add a "show_progress" module that will show the user history of a specific deck, by retrievving the user performance from the database.
+</task>
+
+<architecture_decisions>
+Add a show_history to the protocol and the various UI implementasions and add a flag (by default off) to the main.py file to enable it.
+
+The history should simply be a percentage of correct answers for each attempt. Ignore the visualisaton for now, here we just need to update the architecture document.
+</architecture_decisions>
+
+<deliverables>
+Update the ARCHITECURE.md document to reflect the new changes.
+</deliverables>
+
+**Claude Response:**
+
+I've updated `docs/ARCHITECTURE.md` to document the `show_history` feature. The changes, all doc-only and consistent with the existing conventions:
+
+1. **Module Overview (§1)** — noted that `utils/ui/` renders deck history and `utils/db/` does per-deck history retrieval.
+2. **UI Protocol (§2)** — explained `show_history` is a fourth method, called by `main.py` (not the engine) when the flag is on.
+3. **Data flow (§3)** — added the `db.get_history(dataset) → list[float] → ui.show_history()` path, noting it runs after the session is saved so the current attempt is included.
+4. **main.py (§5)** — added `--show-history` to the options table (`bool`, default `False`/off) and to the application-flow diagram, with a note that the default flow is unchanged unless opted in.
+5. **Key Interfaces (§6)** — added `show_history(self, history: list[float])` to the `UI` Protocol and `TerminalRichUI`, and added `get_history(self, dataset: str) -> list[float]` to `SessionRepository`.
+
+Key design decisions captured:
+- **History = percent correct per attempt** (`correct / total`), derived on read from the existing `result` JSON blob — **no schema change** needed.
+- The flag **defaults off**, keeping the standard flow untouched.
+- History is fetched **after** `save_session_result`, so the just-completed attempt appears.
+- Visualisation is explicitly deferred per the task.
+
+One thing worth flagging: the architecture doc still describes the layout as root-level `main.py` / `utils/`, but the actual code lives under `src/flashcard_quiz/` and `main.py` already uses `get_strategy()` / a `--plain-terminal` flag rather than the `STRATEGIES` dict the doc shows. I kept my edits consistent with the doc's existing style since this was a doc-only task, but the doc has pre-existing drift from the code if you want a separate pass to reconcile it.
+
+
+## Session: 2026-06-07 21:02:21 [d64feb2e]
+
+**User Request:**
+
+<role>
+Senior Python developer implementing planned architecture
+</role>
+
+<task>
+Add the functionality to show the user history of a specific deck, by retrievving the user performance from the database.
+</task>
+
+<context>
+You are implementing code that was specified in @docs/ARCHITECTURE.md
+</context>
+
+<requirements>
+<functionality>
+- Users specify if they wnt to shw the progress or not via a flag in the main.py file
+- If the user wants to show the progress, the application should retrieve the user performance from the database and show it to the user
+- For the TerminalUI, show a ASCII-based bar chart representing (sorted from oldest to latest) the percengate of correct answes
+- For the TerminalRichUI, show a visually appealing bar chart using the rich library
+</functionality>
+
+<error_handling>
+If there is no history, the performance is already showed and simply returna a message saing: "No history found for this deck; keep on exercising and you will see it here soon!"
+</error_handling>
+
+<code_quality>
+- Comprehensive module and class docstrings
+- Method docstrings with Args, Returns, Raises sections
+- Full type hints on all signatures
+</code_quality>
+</requirements>
+
+<testing>
+Update the testing accordingly.
+</testing>
+
+<constraints>
+- Python standard library only
+- Follow PEP 8 style guide
+- Ok to inite sqlite3
+</constraints>
+
+<deliverables>
+Provide:
+- The implementation of the show_history function in the TerminalUI and TerminalRichUI classes
+- Update the main.py file to add the flag to show the progress and the functionality to retrieve the history from the database.
+</deliverables>
+
+**Claude Response:**
+
+All 99 tests pass (17 new). Here's a summary of what was added:
+
+**`session_repository.py`** — `get_history(dataset) -> list[float]`: queries all completed sessions for the deck ordered by `created_at ASC`, parses each JSON blob, and returns `correct/total` per session.
+
+**`ui.py`** — `show_history(history: list[float])` on both implementations:
+- `TerminalUI`: ASCII bar chart using `█`/`░` characters, 20 chars wide, one row per attempt.
+- `TerminalRichUI`: a `rich` table with a score column and a colored bar (green ≥ 80%, yellow ≥ 50%, red < 50%).
+- Both print the "No history found…" message when the list is empty.
+
+**`main.py`** — new `--show-history` flag (default off); when set, calls `repo.get_history` after `save_session_result` and passes the result to `ui.show_history`.
+
+
+## Session: 2026-06-07 21:03:58 [d64feb2e]
+
+**User Request:**
+
+<command-message>log-session</command-message>
+<command-name>/log-session</command-name>
+
+**Claude Response:**
+
+Session logged to `docs/ai_edit_log.md`.

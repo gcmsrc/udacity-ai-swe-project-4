@@ -258,6 +258,16 @@
 
 **AI Response:** Applied all accepted fixes across seven files. In `session_repository.py`: removed `get_missed_cards()`, `_SQL_GET_LAST_RESULT`, and the `json`/`cast` imports. In `main.py`: removed the module-level `_DB_PATH` constant; resolved the path inside `main()`; wrapped `repo.create_session` through `ui.show_summary` in a `try/finally` block with `db.disconnect()` in the `finally` clause. Deleted `utils/strategies/game_planner.py`; removed `GamePlanner` from `strategies/__init__.py`. Added a `self._cards is None` guard to `AdaptiveStrategy.record_result()`. In `test_session_repository.py`: replaced local `_INSERT_SESSION` with an import of `_SQL_INSERT_SESSION` from the production module; removed all five `get_missed_cards` tests. In `test_main.py`: removed unused `MagicMock` import; added `Result` to the `typer.testing` import; changed the helper return type from `"CliRunner"` to `Result`. In `test_strategies.py`: removed the dead first `current_weight` assignment; removed `GamePlanner` import and both `GamePlanner` tests; added `test_adaptive_record_result_before_setup_raises`. In `test_quiz_engine.py`: removed unused `call` import. Fixed flake8 E501 in `ui.py` (shortened docstring). Ran `black`, `flake8`, and `mypy` — all clean. All 84 tests pass.  
 
+## Session: 2026-06-07 21:03:32 (id: d64feb2e-3542-485c-9613-376dce160240)
+
+**Context:** Add a `--show-history` feature to the flashcard CLI so users can see a bar chart of their per-attempt scores for the current deck after finishing a session.  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** Implement `show_history(history: list[float])` on both `TerminalUI` (ASCII bar chart) and `TerminalRichUI` (rich table with colored bars); add `get_history()` to `SessionRepository`; add a `--show-history` CLI flag to `main.py`; update the test suites for all affected modules.  
+
+**AI Response:** Added `get_history(dataset) -> list[float]` to `session_repository.py` — queries all completed sessions for a deck ordered oldest-first and returns `correct/total` per row. Added `show_history` to the `UI` Protocol and to both concrete classes in `ui.py`: `TerminalUI` renders a 20-char ASCII bar chart (`█`/`░`) with per-attempt percentages; `TerminalRichUI` renders a `rich` table with a score column and a color-coded bar (green ≥ 80 %, yellow ≥ 50 %, red below). Both emit a "No history found…" message when passed an empty list. Added the `--show-history` flag to `main.py`; after `save_session_result`, it calls `repo.get_history` and `ui.show_history` when the flag is set. Added 5 `get_history` tests to `test_session_repository.py` and 7 `show_history` tests to `test_ui.py`. All 99 tests pass.  
+
 ## Session: 2026-06-07 18:50:32 (id: 40a7a945-ba34-4dbe-9fcc-cd36f8f8429f)
 
 **Context:** Update the architecture document to describe how `main.py` integrates the Typer CLI, including arguments, invocation forms, application flow, and error handling.  

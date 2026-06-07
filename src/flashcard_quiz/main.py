@@ -36,6 +36,13 @@ def main(
             help="Use the plain text UI instead of the rich-styled one.",
         ),
     ] = False,
+    show_history: Annotated[
+        bool,
+        typer.Option(
+            "--show-history",
+            help="After the session, show the per-attempt score history for this deck.",
+        ),
+    ] = False,
 ) -> None:
     """Run an interactive flashcard quiz session.
 
@@ -45,6 +52,8 @@ def main(
               ``adaptive``.
         plain_terminal: If set, render with the plain ``TerminalUI``; otherwise
               use the default rich-styled ``TerminalRichUI``.
+        show_history: If set, display the per-attempt score history for the
+              deck after the current session is saved.
 
     Raises:
         typer.Exit: with code 1 on an unknown mode or deck-loading failure.
@@ -71,6 +80,10 @@ def main(
 
         repo.save_session_result(session_id, result)
         ui.show_summary(result)
+
+        if show_history:
+            history = repo.get_history(str(deck))
+            ui.show_history(history)
     finally:
         db.disconnect()
 

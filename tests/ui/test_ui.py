@@ -88,3 +88,49 @@ def test_rich_prompt_renders_front(
     with patch("builtins.input", return_value=""):
         TerminalRichUI().prompt_answer(card)
     assert card.front in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# show_history — shared contract + implementation-specific details.
+# ---------------------------------------------------------------------------
+
+
+def test_show_history_empty_prints_no_history_message(
+    ui: UI, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ui.show_history([])
+    assert "No history" in capsys.readouterr().out
+
+
+def test_show_history_shows_attempt_count(
+    ui: UI, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ui.show_history([0.5, 0.75, 1.0])
+    assert "3" in capsys.readouterr().out
+
+
+def test_show_history_shows_all_percentages(
+    ui: UI, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ui.show_history([0.5, 1.0])
+    out = capsys.readouterr().out
+    assert "50%" in out
+    assert "100%" in out
+
+
+def test_plain_show_history_renders_bar_characters(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    TerminalUI().show_history([0.5])
+    out = capsys.readouterr().out
+    assert "█" in out
+    assert "░" in out
+
+
+def test_rich_show_history_renders_bar_characters(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    TerminalRichUI().show_history([0.5])
+    out = capsys.readouterr().out
+    assert "█" in out
+    assert "░" in out

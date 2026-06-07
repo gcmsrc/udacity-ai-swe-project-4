@@ -8,8 +8,8 @@
 | `utils/data_loader/` | Load and validate JSON; raise user-friendly errors |
 | `utils/strategies/` | `QuizMode` ABC + Sequential / Random / Adaptive implementations |
 | `utils/quiz_engine/` | Runs the quiz loop; owns answer-checking and score tracking |
-| `utils/ui/` | All terminal I/O via the `UI` Protocol; `TerminalUI` (plain) and `TerminalRichUI` (`rich`-styled) implementations |
-| `utils/db/` | Singleton DB connection; session creation and result persistence |
+| `utils/ui/` | All terminal I/O via the `UI` Protocol; `TerminalUI` (plain) and `TerminalRichUI` (`rich`-styled) implementations; renders quiz prompts, feedback, summary, and deck history |
+| `utils/db/` | Singleton DB connection; session creation, result persistence, and per-deck history retrieval |
 | `main.py` | Typer app; wires CLI args → data loader → strategy → engine → ui |
 
 ---
@@ -72,7 +72,7 @@ Plain `dataclass` objects carry data between layers. No business logic lives in 
 
 ### UI Protocol — Pluggable Renderers
 
-All terminal I/O sits behind a `UI` **Protocol** (structural subtyping, PEP 544). `QuizEngine` is typed against `UI` and calls three methods — `prompt_answer`, `show_feedback`, `show_summary` — without knowing the concrete renderer. Two implementations satisfy it:
+All terminal I/O sits behind a `UI` **Protocol** (structural subtyping, PEP 544). `QuizEngine` is typed against `UI` and calls three methods — `prompt_answer`, `show_feedback`, `show_summary` — without knowing the concrete renderer. A fourth method, `show_history`, is called by `main.py` (not the engine) when the history flag is enabled. Two implementations satisfy it:
 
 | Class | Backend | Use |
 |---|---|---|
@@ -132,6 +132,13 @@ The `AdaptiveStrategy` additionally reads prior-session results from the databas
 ```
 db.get_missed_cards(dataset)  → list[str]   (fronts the user got wrong before)
   → adaptive.order()          → missed cards first, rest appended
+```
+
+When the `--show-history` flag is enabled, `main.py` retrieves the per-attempt scores for the deck after the current session is saved, so the just-finished attempt is included:
+
+```
+db.get_history(dataset)       → list[float]   (percent correct per past attempt, oldest first)
+  → ui.show_history()         → terminal output
 ```
 
 ---
@@ -221,6 +228,7 @@ flashcard DECK_FILE [--mode sequential|random|adaptive]
 |---|---|---|---|---|
 | `deck_file` | positional argument | `Path` | required | Path to the JSON flashcard deck |
 | `mode` | `--mode` | `str` | `sequential` | Quiz mode: `sequential`, `random`, or `adaptive` |
+| `show_history` | `--show-history` | `bool` | `False` (off) | After the session, show the percent-correct of every past attempt for this deck |
 
 ### `pyproject.toml` Script Entry
 
@@ -244,8 +252,13 @@ main(deck_file, mode)
   ├── QuizEngine(strategy, ui).run(cards)           → SessionResult
   ├── SessionRepository.save_session_result(session_id, result)
   ├── ui.show_summary(result)
+  ├── if --show-history:
+  │     ├── SessionRepository.get_history(deck_file)  → list[float]
+  │     └── ui.show_history(history)
   └── DatabaseConnection().disconnect()
 ```
+
+The `--show-history` flag defaults to off, so the standard flow is unchanged unless the user opts in. History is fetched *after* `save_session_result`, ensuring the attempt just completed appears in the list.
 
 ### Error Handling
 
@@ -342,7 +355,10 @@ class UI(Protocol):
     def prompt_answer(self, card: Flashcard) -> str: ...
     def show_feedback(self, correct: bool, expected: str) -> None: ...
     def show_summary(self, result: SessionResult) -> None: ...
+    def show_history(self, history: list[float]) -> None: ...
 ```
+
+`show_history` receives the percent-correct of each past attempt (oldest first) and renders it. Both `TerminalUI` and `TerminalRichUI` implement it; visualisation detail is deferred (e.g. one line per attempt for the plain UI, a table for the rich UI).
 
 ### `TerminalRichUI` (`utils/ui/`)
 ```python
@@ -363,6 +379,9 @@ class TerminalRichUI:
 
     def show_summary(self, result: SessionResult) -> None:
         """Render a score table and a panel listing any missed cards."""
+
+    def show_history(self, history: list[float]) -> None:
+        """Render the percent-correct of each past attempt, oldest first."""
 ```
 
 `TerminalRichUI` is injected into `QuizEngine` exactly where `TerminalUI` was. `main.py` constructs it as the default renderer; swapping back to `TerminalUI` requires no other change. The optional `console` parameter exists for testing — pass a `Console(file=StringIO())` to capture output.
@@ -410,7 +429,14 @@ class SessionRepository:
 
     def get_missed_cards(self, dataset: str) -> list[str]:
         """Return card fronts the user got wrong in the most recent session for this dataset."""
+
+    def get_history(self, dataset: str) -> list[float]:
+        """Return the percent correct (correct / total) of each completed session
+        for this dataset, ordered oldest first. Sessions with no stored result
+        (NULL) are skipped."""
 ```
+
+`get_history` reads every completed `sessions` row for the dataset ordered by `created_at`, parses each `result` JSON blob, and computes `correct / total` per attempt. The percentage is derived on read rather than stored, so no schema change is required.
 
 `SessionRepository` takes a `DatabaseConnection` via constructor injection, which keeps it testable: tests pass a tmp-path connection without touching the singleton.
 

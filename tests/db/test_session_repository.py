@@ -89,3 +89,38 @@ def test_integrity_error_on_duplicate_session_id(db: DatabaseConnection) -> None
 def test_operational_error_on_bad_query(db: DatabaseConnection) -> None:
     with pytest.raises(sqlite3.OperationalError):
         db.execute("SELECT * FROM nonexistent_table")
+
+
+# --- get_history ---
+
+
+def test_get_history_empty_when_no_sessions(repo: SessionRepository) -> None:
+    assert repo.get_history("data/unknown.json") == []
+
+
+def test_get_history_empty_when_no_completed_sessions(repo: SessionRepository) -> None:
+    repo.create_session("data/deck.json")  # result column stays NULL
+    assert repo.get_history("data/deck.json") == []
+
+
+def test_get_history_single_session(repo: SessionRepository) -> None:
+    session_id = repo.create_session("data/deck.json")
+    repo.save_session_result(session_id, SessionResult(total=4, correct=3, missed=[]))
+    history = repo.get_history("data/deck.json")
+    assert history == pytest.approx([0.75])
+
+
+def test_get_history_multiple_sessions_ordered_oldest_first(
+    repo: SessionRepository,
+) -> None:
+    for total, correct in [(4, 2), (4, 3), (4, 4)]:
+        sid = repo.create_session("data/deck.json")
+        repo.save_session_result(sid, SessionResult(total=total, correct=correct, missed=[]))
+    history = repo.get_history("data/deck.json")
+    assert history == pytest.approx([0.5, 0.75, 1.0])
+
+
+def test_get_history_ignores_other_datasets(repo: SessionRepository) -> None:
+    sid = repo.create_session("data/other.json")
+    repo.save_session_result(sid, SessionResult(total=2, correct=1, missed=[]))
+    assert repo.get_history("data/deck.json") == []
