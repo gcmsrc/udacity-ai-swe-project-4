@@ -1838,3 +1838,78 @@ Session logged. The new entry captures all the changes made: the `_BaseIndexedSt
 **Claude Response:**
 
 Session logged. The only change since the last entry was the linter tightening `test_random_get_next_card_before_setup_raises` to include `match="call setup() before get_next_card()"`.
+
+
+## Session: 2026-06-07 18:23:49 [a03994c1]
+
+**User Request:**
+
+<role>
+Senior Python developer following SOLID principles
+</role>
+<task>
+Provide three alternative solutions to the UI module.
+</task>
+
+<architecture_decisions>
+The UI module is passed to the QuizEngine and it is responsible to handle the terminal I/O.
+Ultimately it should:
+* Be called to present the front card to the user
+* Collect the users's answer and pass it back to the QuizEngine
+Then it can be called to show the feedback to the user based on a specific reporting strategy (to be implemented later, for now we can assume to return just a proportion of correct answers)
+</architecture_decisions>
+
+<deliverables>
+Save the suggested alternatives in docs/planning/alternatives/ui-alternatives.md
+</deliverables>
+
+**Claude Response:**
+
+Saved to `docs/planning/alternatives/ui-alternatives.md`. Here's a summary of the three alternatives:
+
+**Alt 1 — ABC** (`UI` is `abc.ABC`, `TerminalUI` subclasses it). Enforces the contract at instantiation; familiar OOP pattern. Downside: explicit inheritance couples concrete classes to the hierarchy.
+
+**Alt 2 — Protocol** (structural subtyping via `typing.Protocol`). Zero coupling — any class with the right three methods qualifies, including `unittest.mock.Mock`. Caught by `mypy` at type-check time. Best fit given the existing `mypy`/mock test style.
+
+**Alt 3 — Dataclass of callables** (`UI` is a `@dataclass` with three `Callable` fields). Most composable and easiest to stub with a lambda. Less idiomatic for OOP and signature enforcement is weaker.
+
+**Recommended: Alternative 2 (Protocol)** — aligns with the existing test patterns, requires no inheritance, and lets `mypy` (already in the toolchain) enforce the contract.
+
+
+## Session: 2026-06-07 18:29:17 [a03994c1]
+
+**User Request:**
+
+can you implement option 2 (Protocol)? please add tests for the TerminalUI class and update the other integration tests mocking the UI class
+
+**Claude Response:**
+
+77/77 passing. Here's what changed:
+
+- **`utils/ui/ui.py`** — `UI` is now a `typing.Protocol` (3 method stubs); `TerminalUI` is a standalone concrete class with `input`/`print` implementations — no inheritance required.
+- **`utils/ui/__init__.py`** — exports both `UI` and `TerminalUI`.
+- **`tests/ui/test_ui.py`** — targets `TerminalUI` directly; adds 4 new tests: prompt includes card front, correct feedback hides the expected answer, summary shows the percentage, and summary omits the "Missed" line when there are none.
+- **`tests/quiz_engine/test_quiz_engine.py`** — unchanged; `MagicMock(spec=UI)` works with a Protocol as-is.
+
+
+## Session: 2026-06-07 18:33:21 [a03994c1]
+
+**User Request:**
+
+In the test_ui, you are not testing tfor the wrong anser
+
+**Claude Response:**
+
+Added `test_show_feedback_wrong_indicates_wrong` which asserts `"Wrong"` appears in the output when `correct=False`. 12/12 passing.
+
+
+## Session: 2026-06-07 18:34:16 [a03994c1]
+
+**User Request:**
+
+<command-message>log-session</command-message>
+<command-name>/log-session</command-name>
+
+**Claude Response:**
+
+Session logged in `docs/ai_edit_log.md` — covers the UI alternatives design, the Protocol implementation, and the missing wrong-answer test fix.

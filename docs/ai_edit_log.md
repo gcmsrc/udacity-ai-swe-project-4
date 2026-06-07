@@ -198,6 +198,16 @@
 
 **AI Response:** Added `_BaseIndexedStrategy` to `utils/strategies/base.py` (shared `_cards`, `_index`, `get_next_card()` with pre-setup `RuntimeError` guard); simplified `sequential.py` and `random_strategy.py` to only override `setup()`. Rewrote `adaptive.py` with `_MISSED_WEIGHT_MULTIPLIER = 2.0`, a `{front: index}` dict built in `setup()`, `ValueError` on unknown card in `record_result()`, and pre-setup `RuntimeError` in `get_next_card()`. Removed the `@property strategy` from `game_planner.py`. Replaced both `assert self._conn is not None` guards in `connection.py` with `raise RuntimeError(...)`. Fixed `session_repository.py` type errors (`json.loads(str(...))`, `cast(list[object], ...)`, list comprehension). Removed `self._ui.show_summary(result)` from `quiz_engine.py`. In `test_strategies.py`: replaced two internal-weight tests with `test_adaptive_missed_card_drawn_more_often` (300-run statistical assertion), added `_before_setup_raises` tests for all three strategies, added `test_adaptive_record_result_unknown_card_raises`, updated GamePlanner tests to use `._strategy`. In `test_quiz_engine.py`: removed `test_engine_calls_show_summary_once`, added four tests verifying `setup.assert_called_once_with`, `get_next_card` call count, `record_result` call count and args, and `show_summary.assert_not_called`. Fixed `test_session_repository.py` with `json.loads(str(...))`. All 46 tests pass; mypy reports zero errors.
 
+## Session: 2026-06-07 18:33:56 (id: a03994c1-7ae6-4c03-8c0b-8e1e4fcafbd5)
+
+**Context:** Design and implement the `UI` module — the terminal I/O layer injected into `QuizEngine` — using a Protocol-based approach.  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** First asked for three alternative designs for the UI module (ABC, Protocol, dataclass of callables) with trade-offs and a recommendation, saved to `docs/planning/alternatives/ui-alternatives.md`. Then asked to implement Option 2 (Protocol), add full tests for `TerminalUI`, and update any integration tests that mock the UI. A follow-up pointed out a missing test for the wrong-answer feedback indicator.  
+
+**AI Response:** Rewrote `utils/ui/ui.py`: `UI` is now a `typing.Protocol` with three method stubs (`prompt_answer`, `show_feedback`, `show_summary`); `TerminalUI` is a standalone concrete class (no inheritance) implementing all three with plain `input`/`print`. Updated `utils/ui/__init__.py` to export both. Rewrote `tests/ui/test_ui.py` targeting `TerminalUI` directly with 12 tests: prompt returns stripped input, prompt includes card front in prompt text, correct feedback prints something but hides the expected answer, wrong feedback shows "Wrong" indicator and the expected answer, summary shows total/correct/percentage, summary lists missed cards, summary omits the "Missed" line when none. The `tests/quiz_engine/test_quiz_engine.py` integration tests required no changes — `MagicMock(spec=UI)` continues to work with a Protocol. All 77 tests pass.  
+
 ## Session: 2026-06-07 18:00:05 (id: b2ff0f07-70fa-4643-b2ca-e0136d4a3ec0)
 
 **Context:** Post-edit linter tightened a test assertion in `test_strategies.py` after the previous log entry was written.  
