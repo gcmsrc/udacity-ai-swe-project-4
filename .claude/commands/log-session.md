@@ -1,9 +1,9 @@
 ---
-description: Summarise the current session and append it to docs/ai_edit_log.md
+description: Summarise the current session and append it to docs/ai_edit_log_full.md
 allowed-tools: Bash(date:*), Read, Edit
 ---
 
-Summarise the current conversation session and append the summary to `docs/ai_edit_log.md`.
+Summarise the current conversation session and append the summary to `docs/ai_edit_log_full.md`.
 
 Append a new entry (do not overwrite existing content) using exactly this template:
 
@@ -28,4 +28,4 @@ Guidelines:
 - **Prompt/Request:** summarise what the user actually asked for across the session, not verbatim.
 - **AI Response:** summarise what was built or changed. Reference files by name. Do not paste full code blocks.
 - Please add an empty line between each section.
-- If `docs/ai_edit_log.md` is empty, this is the first entry; otherwise append below the existing entries.
+- If `docs/ai_edit_log_full.md` is empty, this is the first entry; otherwise append below the existing entries.
