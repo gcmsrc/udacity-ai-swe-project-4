@@ -19,3 +19,12 @@ ignore_missing_imports = true
 
 [tool.isort]
 profile = "black"
+
+[tool.flake8]
+max-line-length = 88
+
+[dependency-groups]
+dev = [
+    "flake8-pyproject>=1.2.4",
+    "pytest-cov>=7.1.0",
+]

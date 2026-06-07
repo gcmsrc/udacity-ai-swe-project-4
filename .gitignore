@@ -1,2 +1,8 @@
 # Ignore environment variables
 .env
+
+# Ignore __pycache__
+**/*.pyc
+
+# Ignore coverage
+.coverage

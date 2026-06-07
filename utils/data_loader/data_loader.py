@@ -7,7 +7,7 @@ into user-friendly ``typer.Exit`` calls.
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from utils.models import Flashcard
 
@@ -23,7 +23,7 @@ class CardsDataLoader:
     - **Array format**: ``[{"front": "...", "back": "..."}, ...]``
     - **Wrapped format**: ``{"cards": [{"front": "...", "back": "..."}, ...]}``
 
-    Only absolute paths are accepted to prevent path-traversal attacks.
+    Only absolute paths are accepted.
     """
 
     def load(self, path: Path | str) -> list[Flashcard]:
@@ -91,7 +91,7 @@ class CardsDataLoader:
         if isinstance(data, list):
             return data
         if isinstance(data, dict) and _WRAPPED_KEY in data:
-            return data[_WRAPPED_KEY]
+            return cast(list[Any], data[_WRAPPED_KEY])
         raise ValueError(
             f"Expected a JSON array or an object with a '{_WRAPPED_KEY}' key in {path}"
         )
@@ -123,7 +123,7 @@ class CardsDataLoader:
         return Flashcard(front=item["front"], back=item["back"])
 
 
-def load_flashcards(_path: Path) -> list[Flashcard]:
+def load_flashcards(path: Path) -> list[Flashcard]:
     """Load and validate a JSON deck (CLI-facing wrapper).
 
     .. note::

@@ -48,6 +48,26 @@
 
 **AI Response:** Rewrote `utils/data_loader/data_loader.py`: `load()` now accepts `Path | str` (converts `str` to `Path` early), removed the redundant double `Path()` wrapping, added `_WRAPPED_KEY` and `_REQUIRED_FIELDS` module constants, added a docstring note to `_extract_cards_list` about the expected element shape, extended `_parse_card` to reject non-string field values, and replaced the `load_flashcards` body with `raise NotImplementedError`. Rewrote `tests/data_loader/test_data_loader.py`: introduced `SAMPLE_CARDS` constant shared across fixtures, collapsed four duplicate test functions into two parametrized tests (array vs wrapped format), added `test_loader_accepts_str_path` and `test_loader_relative_str_path_raises_value_error`, added `test_loader_wrapped_empty_deck_raises_value_error`, added parametrized `test_loader_non_string_field_value_raises_value_error` and `test_loader_ignores_extra_fields`. Updated `docs/ARCHITECTURE.md` to add `CardsDataLoader` to the Key Interfaces section and document both supported JSON formats. All 20 tests pass.  
 
+## Session: 2026-06-07 13:20:05 (id: 8e24553f-cd28-44e1-bcc2-2aed933370e8)
+
+**Context:** Re-run a structured code review of the data layer after Revision 1 fixes were applied, producing a Revision 2 report against the updated code.  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** Asked Claude to perform a fresh code review of the current state of `utils/data_loader/data_loader.py` and `tests/data_loader/test_data_loader.py` using the same framework as before (duplication, magic values, type safety, complexity, code smells, plus five AI-specific checks), run all format/lint/type tools, check coverage, and save output to `docs/code-generation/data-layer-validation/code-review.md`.  
+
+**AI Response:** Overwrote `docs/code-generation/data-layer-validation/code-review.md` with Revision 2. Opened with a table of nine issues resolved since Revision 1. New/remaining findings: `load_flashcards` is still an unimplemented stub exposing `raise NotImplementedError` despite being the primary public API per the architecture spec (critical); `_path` parameter uses a leading underscore misleadingly; `CardsDataLoader` exported in `__all__` contradicts its "internal" classification in `ARCHITECTURE.md`; overstated security claim in the class docstring; unused `tmp_path` fixture in one test; redundant `isinstance` assertion still present. Format results: black and isort pass; flake8 fails with 10 E501 violations caused by black/flake8 line-length mismatch (fix: add `max-line-length = 88` to `pyproject.toml`); mypy fails with 3 errors (`no-any-return` on `_extract_cards_list` and two bare `dict` annotations in tests). Coverage is 98% — only uncovered line is the `NotImplementedError` stub.  
+
+## Session: 2026-06-07 13:25:56 (id: 1569a327-2c71-42a4-b448-20a6880767d4)
+
+**Context:** Apply the accepted fixes from the Revision 2 code review of the data layer, leaving discarded issues untouched.  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** Given a prioritised accept/discard list over the Revision 2 review findings, implement only the accepted fixes: mypy `cast` fix, bare `dict` type annotations in tests, misleading `_path` parameter name, overstated security docstring, unused `tmp_path` fixture, redundant `isinstance` assertion, and align flake8 line-length with black in `pyproject.toml`. Discard the stateless-class refactor, the `load_flashcards` implementation, its tests, and the `__all__` change.  
+
+**AI Response:** Updated `utils/data_loader/data_loader.py`: added `cast` to the `typing` import and wrapped `data[_WRAPPED_KEY]` return in `cast(list[Any], ...)` (Issue 3.1); renamed `_path` → `path` in `load_flashcards` (Issue 5.1); removed the "to prevent path-traversal attacks" clause from the class docstring (Issue 5.3). Updated `tests/data_loader/test_data_loader.py`: added `from typing import Any`; changed bare `dict` annotations to `dict[str, Any]` on two test functions (Issue 3.2); removed the unused `tmp_path` parameter from `test_loader_relative_path_raises_value_error` (Issue A3); removed the redundant `isinstance(c, Flashcard)` assertion and its now-unused `Flashcard` import (Issue A4). Updated `pyproject.toml`: added `[tool.flake8]` with `max-line-length = 88` and added `flake8-pyproject` as a dev dependency so flake8 can read from `pyproject.toml`. All 20 tests pass; mypy reports zero errors; flake8 reports zero violations.  
+
 ## Session: 2026-06-07 11:28:42 (id: 2421221f-7cbf-4989-8389-5c6eba91c63e)
 
 **Context:** Scaffold the full repository structure, implement stubs, and create all failing (red) tests as the first step of a Red-Green-Refactor cycle.  
