@@ -30,6 +30,8 @@ Running a quiz session with `--show-history`:
 
 ## Installation
 
+The `.venv/` directory is intentionally not included in the submission because it is machine-specific and can be recreated from the dependency files.
+
 ### With uv (recommended)
 
 ```bash
