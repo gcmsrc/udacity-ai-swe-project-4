@@ -1,0 +1,151 @@
+"""Tests for DatabaseConnection and SessionRepository."""
+
+import sqlite3
+from pathlib import Path
+
+import pytest
+
+from utils.db import DatabaseConnection, SessionRepository
+from utils.models import SessionResult
+
+
+@pytest.fixture
+def db(tmp_path: Path) -> DatabaseConnection:
+    """Provide a fresh DatabaseConnection for each test."""
+    conn = DatabaseConnection()
+    conn.connect(tmp_path / "test.db")
+    yield conn
+    conn.disconnect()
+
+
+@pytest.fixture
+def repo(db: DatabaseConnection) -> SessionRepository:
+    return SessionRepository(db)
+
+
+# --- create_session ---
+
+
+def test_create_session_returns_string(repo: SessionRepository) -> None:
+    assert isinstance(repo.create_session("data/sample.json"), str)
+
+
+def test_create_session_returns_unique_ids(repo: SessionRepository) -> None:
+    id1 = repo.create_session("data/sample.json")
+    id2 = repo.create_session("data/sample.json")
+    assert id1 != id2
+
+
+def test_create_session_stores_dataset(repo: SessionRepository, db: DatabaseConnection) -> None:
+    repo.create_session("data/sample.json")
+    rows = db.execute("SELECT dataset FROM sessions")
+    assert rows[0]["dataset"] == "data/sample.json"
+
+
+# --- save_session_result ---
+
+
+def test_save_session_result_persists_result(
+    repo: SessionRepository, db: DatabaseConnection
+) -> None:
+    session_id = repo.create_session("data/deck.json")
+    result = SessionResult(total=3, correct=2, missed=["CPU"])
+    repo.save_session_result(session_id, result)
+    rows = db.execute("SELECT result FROM sessions WHERE id = ?", (session_id,))
+    assert rows[0]["result"] is not None
+
+
+def test_save_session_result_stores_missed_cards(
+    repo: SessionRepository, db: DatabaseConnection
+) -> None:
+    session_id = repo.create_session("data/deck.json")
+    result = SessionResult(total=2, correct=1, missed=["RAM"])
+    repo.save_session_result(session_id, result)
+    rows = db.execute("SELECT result FROM sessions WHERE id = ?", (session_id,))
+    import json
+    data = json.loads(rows[0]["result"])
+    assert data["missed"] == ["RAM"]
+    assert data["total"] == 2
+    assert data["correct"] == 1
+
+
+# --- get_missed_cards ---
+
+
+def test_get_missed_cards_empty_when_no_sessions(repo: SessionRepository) -> None:
+    assert repo.get_missed_cards("data/deck.json") == []
+
+
+def test_get_missed_cards_empty_when_no_completed_sessions(repo: SessionRepository) -> None:
+    repo.create_session("data/deck.json")  # created but result never saved
+    assert repo.get_missed_cards("data/deck.json") == []
+
+
+def test_get_missed_cards_returns_missed_from_last_session(repo: SessionRepository) -> None:
+    session_id = repo.create_session("data/deck.json")
+    repo.save_session_result(session_id, SessionResult(total=2, correct=1, missed=["CPU"]))
+    missed = repo.get_missed_cards("data/deck.json")
+    assert "CPU" in missed
+
+
+def test_get_missed_cards_uses_most_recent_session(repo: SessionRepository) -> None:
+    """Only the last completed session is used, not all historical sessions."""
+    old_id = repo.create_session("data/deck.json")
+    repo.save_session_result(old_id, SessionResult(total=2, correct=1, missed=["CPU"]))
+    new_id = repo.create_session("data/deck.json")
+    repo.save_session_result(new_id, SessionResult(total=2, correct=2, missed=[]))
+    assert repo.get_missed_cards("data/deck.json") == []
+
+
+def test_get_missed_cards_excludes_other_datasets(repo: SessionRepository) -> None:
+    session_id = repo.create_session("data/other.json")
+    repo.save_session_result(session_id, SessionResult(total=1, correct=0, missed=["CPU"]))
+    assert repo.get_missed_cards("data/deck.json") == []
+
+
+# --- SQL injection ---
+
+SQL_INJECTION = "admin' OR '1'='1"
+
+
+def test_sql_injection_in_get_missed_cards_returns_empty(repo: SessionRepository) -> None:
+    """An injection string used as dataset must not leak rows from other datasets."""
+    session_id = repo.create_session("data/deck.json")
+    repo.save_session_result(session_id, SessionResult(total=1, correct=0, missed=["CPU"]))
+    assert repo.get_missed_cards(SQL_INJECTION) == []
+
+
+def test_sql_injection_in_create_session_stored_as_literal(
+    repo: SessionRepository, db: DatabaseConnection
+) -> None:
+    """An injection string must be stored verbatim, not interpreted as SQL."""
+    repo.create_session(SQL_INJECTION)
+    rows = db.execute("SELECT dataset FROM sessions")
+    assert rows[0]["dataset"] == SQL_INJECTION
+
+
+def test_sql_injection_dataset_does_not_match_real_dataset(repo: SessionRepository) -> None:
+    """get_missed_cards with an injection string must not match a legitimately named dataset."""
+    session_id = repo.create_session(SQL_INJECTION)
+    repo.save_session_result(session_id, SessionResult(total=1, correct=0, missed=["RAM"]))
+    assert repo.get_missed_cards("data/deck.json") == []
+
+
+# --- error handling ---
+
+
+def test_integrity_error_on_duplicate_session_id(db: DatabaseConnection) -> None:
+    db.execute(
+        "INSERT INTO sessions (id, dataset, created_at, result) VALUES (?, ?, ?, NULL)",
+        ("fixed-id", "data/deck.json", "2024-01-01T00:00:00+00:00"),
+    )
+    with pytest.raises(sqlite3.IntegrityError):
+        db.execute(
+            "INSERT INTO sessions (id, dataset, created_at, result) VALUES (?, ?, ?, NULL)",
+            ("fixed-id", "data/deck.json", "2024-01-01T00:00:01+00:00"),
+        )
+
+
+def test_operational_error_on_bad_query(db: DatabaseConnection) -> None:
+    with pytest.raises(sqlite3.OperationalError):
+        db.execute("SELECT * FROM nonexistent_table")

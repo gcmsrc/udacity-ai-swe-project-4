@@ -118,6 +118,26 @@
 
 **AI Response:** Updated `docs/ARCHITECTURE.md` across all sections: added `utils/db/` to the Module Overview table; added a new Singleton Pattern subsection in Design Patterns explaining `DatabaseConnection`, its `_instance` guard, and why a class over a module global; extended the Module Dependency Diagram to show `utils/db/` wired into `main.py` and a separate flow showing `AdaptiveStrategy` reading missed cards from the DB; updated the data-flow diagram to include `create_session()` and `save_results()` steps; added `utils/db/` sub-package to the folder structure (`connection.py`, `session_repository.py`) and a matching `tests/db/` directory; added `DatabaseConnection` and `SessionRepository` key interfaces with full method signatures and the SQLite schema (`sessions` and `card_results` tables); updated Extension Points with two new sections covering how to add fields to session persistence and how to swap the database backend.  
 
+## Session: 2026-06-07 15:27:36 (id: 456ebeae-75c2-449f-a61e-f759e9e38f23)
+
+**Context:** Implement the high-level structure and stubs for the session-based progress tracking layer, then create all failing red tests as the first step of a Red-Green-Refactor cycle.  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** Acting as a senior Python developer following SOLID principles, asked Claude to create the `utils/db/` package (stubs only) as specified in `docs/ARCHITECTURE.md`, and write a full set of failing tests in `tests/db/test_session_repository.py` covering `create_session`, `save_result`, and `get_missed_cards`.  
+
+**AI Response:** Created `utils/db/connection.py` with `DatabaseConnection` (singleton pattern, `__new__` guard, `connect`/`disconnect`/`execute` stubs raising `NotImplementedError`), `utils/db/session_repository.py` with `SessionRepository` (constructor-injected `DatabaseConnection`, all three methods as stubs), and `utils/db/__init__.py` re-exporting both classes. Created `tests/db/__init__.py` and `tests/db/test_session_repository.py` with 10 red tests: three for `create_session` (returns string, returns unique IDs, stores dataset name), two for `save_result` (persists correct/incorrect flag, links to session), and five for `get_missed_cards` (empty baseline, returns only incorrect fronts, scopes per dataset, deduplicates repeated misses, cross-session link). All 10 tests error on `NotImplementedError` as expected; existing test suite is unaffected.  
+
+## Session: 2026-06-07 15:58:05 (id: 35d745e7-9a2e-4805-87d6-524afd0d4f4c)
+
+**Context:** Implement the `DatabaseConnection` singleton and `SessionRepository` for session-based progress tracking, then simplify the schema and add SQL injection tests.  
+
+**AI Tool Used:** Claude  
+
+**Prompt/Request:** Asked Claude to implement the stubs in `utils/db/connection.py` and `utils/db/session_repository.py` per the architecture spec, then simplify the design to a single `sessions` table with a JSON-serialised `SessionResult` (no separate `card_results` table), and finally add explicit SQL injection tests using a classic `OR '1'='1'` payload.  
+
+**AI Response:** Implemented `DatabaseConnection` in `connection.py` with `connect` (opens SQLite, creates schema), `disconnect` (commits and closes), `execute` (parameterised queries returning `list[dict]`), and a private `_create_schema` helper. First iteration used two tables (`sessions` + `card_results`); after user feedback, simplified to a single `sessions` table with a `result TEXT` column storing a JSON blob. Updated `session_repository.py` accordingly: `create_session` inserts with `result = NULL`, `save_session_result` serialises a `SessionResult` to JSON and updates the row, `get_missed_cards` fetches the most-recent completed session (`ORDER BY created_at DESC LIMIT 1`) and deserialises the blob. Added a `close()` convenience method. Rewrote `tests/db/test_session_repository.py` to match the new interface and added three SQL injection tests (`test_sql_injection_in_get_missed_cards_returns_empty`, `test_sql_injection_in_create_session_stored_as_literal`, `test_sql_injection_dataset_does_not_match_real_dataset`) verifying that the `OR '1'='1'` payload is treated as a literal string. Created `docs/code-generation/db/implementation_summary.md`. All 15 db tests pass.  
+
 ## Session: 2026-06-07 11:28:42 (id: 2421221f-7cbf-4989-8389-5c6eba91c63e)
 
 **Context:** Scaffold the full repository structure, implement stubs, and create all failing (red) tests as the first step of a Red-Green-Refactor cycle.  
