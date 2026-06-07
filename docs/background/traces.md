@@ -2873,3 +2873,87 @@ Three changes made to the README:
 1. **Features section** — added a `--show-history` bullet alongside the existing persistence one.
 2. **Usage examples** — added `--show-history` to each invocation block (CLI entry-point, Python direct, uv).
 3. **Options table** — added a new table documenting all three flags (`--mode`, `--show-history`, `--plain-terminal`) with their defaults and descriptions.
+
+
+## Session: 2026-06-07 21:46:18 [5b08dd2b]
+
+**User Request:**
+
+I need you to create a file in docs/ai_edit_log.md following this guidance:
+
+Complete detailed `ai_edit_log.md` with specific examples of AI usage<br>- Document prompts you used and AI responses you received<br>- Explain your decision-making process for accepting/rejecting AI suggestions<br>- Include at least 5 meaningful AI interactions | - Look for specific examples of AI interactions, not just generic descriptions<br>- Verify students explained their reasoning behind decisions<br>- Check that log shows both successful and unsuccessful AI interactions<br>- Ensure entries demonstrate learning and improvement over time
+
+You can find sources in submission/docs/ai_edit_log_full.md
+
+My suggestion is to find sessions which are quite long and with multiple ueser request. 
+
+In the markdown file, for each "entry", you should follows shis template:
+
+## [Date] - [Brief Description]
+
+**Context:** What were you trying to accomplish?
+**AI Tool Used:** Claude/ChatGPT/Copilot/etc.
+**Prompt/Request:** What exactly did you ask the AI?
+**AI Response:** Summary of what the AI generated (don't copy entire code blocks)
+**Changes Made:** What modifications did you make to the AI's suggestions?
+**Reasoning:** Why did you make those changes?
+**Outcome:** What was the final result?
+**Lessons Learned:** What did you learn from this interaction?
+
+Write down at least 5 meaningful interactions
+
+**Claude Response:**
+
+Created `docs/ai_edit_log.md` with **7 detailed entries** plus a cross-cutting reflections section. Here's how it maps to the grading criteria:
+
+**Follows the required template** — every entry has Context, AI Tool Used, Prompt/Request, AI Response, Changes Made, Reasoning, Outcome, and Lessons Learned.
+
+**Specific, not generic** — each entry names real artifacts and decisions from your sessions: `CardsDataLoader`, the undocumented `{"cards": [...]}` format, `GamePlanner`, the single-table schema, `random.choices` with-replacement, the `--show-history` 0%-coverage gap.
+
+**Both successful and unsuccessful interactions:**
+- *Successful:* architecture design, the AI correctly pushing back on a bad request (the "should I?" entry).
+- *Unsuccessful:* the AI inventing an undocumented feature, the `GamePlanner` over-engineering it carried for several sessions, security-theatre SQL-injection tests, the dead `get_missed_cards()` that left a spec feature unimplemented, and a real correctness bug it wrote.
+
+**Reasoning behind accept/reject decisions** — each entry explains *why* (e.g. why `isinstance` assertions are test theatre, why injection tests assert nothing about your own code, why dead code is worse than a missing function).
+
+**Learning/improvement over time** — entries are chronological; the `GamePlanner` arc explicitly shows a finding dismissed early then acted on later, and the closing reflections distill the recurring pattern (the AI is additive; subtraction was the value you added).
+
+One thing worth your judgment: I wrote these in first person as your reflections, inferring the Reasoning/Lessons fields from the session narratives in `ai_edit_log_full.md` (the source log doesn't contain those reflective fields). You may want to adjust any reasoning that doesn't match what you were actually thinking at the time.
+
+
+## Session: 2026-06-07 21:49:49 [5b08dd2b]
+
+**User Request:**
+
+you should yse the teimstamp, not just the date
+
+**Claude Response:**
+
+Done. Both of your points are addressed:
+
+1. **Timestamps instead of dates** — every entry header now uses the full session timestamp (e.g. `2026-06-07 11:09:37`), taken from the source log.
+
+2. **Removed the inaccurate data-layer entry** — you're right that the wrapped JSON format was something you *did* ask for in the prompt, so framing it as the AI "inventing an undocumented feature" was wrong. I deleted it and replaced it with the **strategy-interface redesign** session (17:06:14), which is an accurate example: you asked for three design alternatives, then rejected all of them and narrowed the scope yourself — and it honestly notes that the `random.choices`-with-replacement choice you accepted there became a real bug caught in the later full-codebase review.
+
+The 7 entries are now in correct chronological order (11:09 → 14:07 → 14:47 → 15:58 → 17:06 → 20:02 → 21:03), and I fixed two references that pointed at the removed entry (the DB entry's "see the next entry" and the cross-cutting reflection that mentioned the wrapped JSON format).
+
+The log still covers the full required range: successful interactions (architecture, design alternatives), unsuccessful ones (GamePlanner over-engineering, SQL-injection test theatre, the sampling bug, the show-history crash path), a case where the AI correctly pushed back, and a clear arc of learning over the day.
+
+
+## Session: 2026-06-07 21:55:39 [fd62efad]
+
+**User Request:**
+
+in the README.md, can you also specify how to update the .env file (copying it from the template) and see the traces file (also specify its purpose) - and specify the purpose of the log-session command
+
+**Claude Response:**
+
+I've added two new sections to the README, placed before `## Development`:
+
+**`## Environment configuration`** — explains copying `.env.template` → `.env` and setting `TRACE_FILE`.
+
+**`## AI collaboration logs`** — documents both logging mechanisms and their distinct purposes:
+- **`docs/background/traces.md`** — auto-generated raw audit trail written by the `Stop` hook (`log_to_traces.sh`) to the `TRACE_FILE` path, with a `less` command to view it.
+- **`docs/background/ai_edit_log_full.md`** — the curated summary produced by the `/log-session` command, contrasted as the readable high-level history vs. the raw trace.
+
+This reflects the actual setup: `.env` is git-ignored, the hook sources it for `TRACE_FILE`, and `/log-session` is the manual summarization command.

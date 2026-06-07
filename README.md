@@ -103,6 +103,34 @@ Two JSON formats are supported.
 
 Each card requires a `front` (question) and `back` (answer) string field.
 
+## Environment configuration
+
+The project reads configuration from a local `.env` file (git-ignored). Create it by copying the template:
+
+```bash
+cp .env.template .env
+```
+
+Then edit `.env` and set `TRACE_FILE` to the path where AI session traces should be written, e.g.:
+
+```bash
+TRACE_FILE="docs/background/traces.md"
+```
+
+## AI collaboration logs
+
+This project keeps two records of its AI-assisted development:
+
+- **`docs/background/traces.md`** — an automatic, raw log. A Claude Code `Stop` hook (`.claude/log_to_traces.sh`) appends the last user request and Claude response to the file pointed to by `TRACE_FILE` at the end of every session. To view it:
+
+  ```bash
+  less docs/background/traces.md
+  ```
+
+  Its purpose is an unfiltered audit trail of every prompt/response exchange, captured without manual effort.
+
+- **`docs/background/ai_edit_log_full.md`** — a curated summary. The `/log-session` command summarises the current session (context, request, and what changed) and appends a structured entry. Unlike the raw traces, this is a readable, high-level history of what was built and why.
+
 ## Development
 
 Install dev dependencies:
