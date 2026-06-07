@@ -88,14 +88,14 @@ Save all this inside docs/ARCHITECTURE.md
 **Modules (6 total):**
 - `models.py` — pure data classes (`Flashcard`, `SessionResult`), no logic
 - `data_loader.py` — JSON loading + validation, raises `typer.Exit` on error (no stack traces)
-- `strategies.py` — `QuizStrategy` Protocol + `Sequential`, `Random`, `Adaptive` implementations
+- `strategies.py` — `QuizMode` Protocol + `Sequential`, `Random`, `Adaptive` implementations
 - `quiz_engine.py` — quiz loop, answer-checking, score tracking
 - `ui.py` — all terminal I/O isolated here
 - `main.py` — Typer wiring only
 
 **Key design decisions:**
 - **Strategy Pattern** on `order(cards) -> list[Flashcard]` — swapping modes is just swapping a strategy object; adding Spaced Repetition means one new class, zero changes elsewhere
-- `QuizStrategy` is a `Protocol` (structural typing) rather than an ABC — no inheritance required, easier to test with mocks
+- `QuizMode` is a `Protocol` (structural typing) rather than an ABC — no inheritance required, easier to test with mocks
 - `ui.py` is kept separate from `quiz_engine.py` so the engine can be unit-tested without touching the terminal
 - Data flows one-way: loader → strategy → engine → ui
 
@@ -123,9 +123,9 @@ Also, I would like a more structured approch insisde utils. I would prefer indiv
 
 `docs/ARCHITECTURE.md` updated. The two changes:
 
-1. **ABC over Protocol** — `QuizStrategy` now extends `ABC` with `@abstractmethod` on `order()`. Forgetting to implement it raises `TypeError` at instantiation rather than slipping past at runtime. The rationale is documented in section 2.
+1. **ABC over Protocol** — `QuizMode` now extends `ABC` with `@abstractmethod` on `order()`. Forgetting to implement it raises `TypeError` at instantiation rather than slipping past at runtime. The rationale is documented in section 2.
 
-2. **Package-per-concern structure** — both `utils/` and `tests/` are now organised as subdirectories with their own `__init__.py`. Each package's `__init__.py` re-exports the public surface (e.g. `from .base import QuizStrategy`), so callers import from the package name rather than internal module paths. The strategies package is also split into one file per strategy (`base.py`, `sequential.py`, `random_strategy.py`, `adaptive.py`) to make adding new modes even cleaner.
+2. **Package-per-concern structure** — both `utils/` and `tests/` are now organised as subdirectories with their own `__init__.py`. Each package's `__init__.py` re-exports the public surface (e.g. `from .base import QuizMode`), so callers import from the package name rather than internal module paths. The strategies package is also split into one file per strategy (`base.py`, `sequential.py`, `random_strategy.py`, `adaptive.py`) to make adding new modes even cleaner.
 
 
 ## Session: 2026-06-07 11:18:05 [ae1a4879]
@@ -181,7 +181,7 @@ All done. Here's a summary of what was created and the test results:
 ```
 utils/models/          — Flashcard, SessionResult dataclasses (implemented)
 utils/data_loader/     — load_flashcards stub → raises NotImplementedError
-utils/strategies/      — QuizStrategy ABC + Sequential/Random/Adaptive stubs
+utils/strategies/      — QuizMode ABC + Sequential/Random/Adaptive stubs
 utils/quiz_engine/     — QuizEngine stub (init + run raise NotImplementedError)
 utils/ui/              — UI stub (all methods raise NotImplementedError)
 main.py                — Typer CLI stub
@@ -714,3 +714,356 @@ All tools pass. Here's a summary of what was changed:
 **Claude Response:**
 
 Session logged. The new entry records the seven accepted fixes applied in this session, the files changed, and the clean tool results (20 tests passing, mypy zero errors, flake8 zero violations).
+
+
+## Session: 2026-06-07 13:45:55 [0c6e9196]
+
+**User Request:**
+
+<role>
+Senior Python developer implementing planned architecture
+</role>
+
+<task>
+Implement the three quiz strategies: Sequential, Random, and Adaptive.
+</task>
+
+<context>
+You are implementing code that was specified in @docs/ARCHITECTURE.md
+</context>
+
+<interface_specification>
+A senior developer implemented a high-level interface for the quiz strategies in `utils/strategies/base.py`. Such implementation, however, is just a ABC class while you would need to develop three concrete strategies: Sequential, Random, but not Adaptive
+</interface_specification>
+
+<requirements>
+<functionality>
+- Implement the two quiz strategies: Sequential and Random.
+</functionality>
+
+<error_handling>
+The strategies should be able to handle the following errors:
+* The factory should raise a ValueError if the strategy is not supported.
+</error_handling>
+
+<code_quality>
+- Comprehensive module and class docstrings
+- Method docstrings with Args, Returns, Raises sections
+- Full type hints on all signatures
+</code_quality>
+</requirements>
+
+<testing>
+Please update the test_strategies.py accordingly.
+Remove the AdaptiveStrategy test cases.
+</testing>
+
+<constraints>
+- Python standard library only
+- Follow PEP 8 style guide
+- No external dependencies
+</constraints>
+
+<deliverables>
+Provide:
+- The implementation of the Sequential and Random strategies
+- The tests for the Sequential and Random strategies
+- Provide a summary of the changes you did inside docs/code-generation/strategies/implementation_summary.md`
+</deliverables>
+
+**Claude Response:**
+
+All done. Here's a summary of what changed:
+
+| File | Change |
+|---|---|
+| `utils/strategies/sequential.py` | `order()` returns `list(cards)` — a copy in original order |
+| `utils/strategies/random_strategy.py` | `order()` copies, shuffles, and returns the copy |
+| `utils/strategies/__init__.py` | Removed `AdaptiveStrategy`; added `get_strategy()` factory with `ValueError` for unknown modes |
+| `main.py` | Uses `get_strategy` instead of a local dict; removed `AdaptiveStrategy` references |
+| `tests/strategies/test_strategies.py` | Dropped all Adaptive tests; added 3 factory tests |
+| `docs/code-generation/strategies/implementation_summary.md` | Created summary doc |
+
+All 10 tests pass. `AdaptiveStrategy` is kept on disk as a planned extension point but is no longer exported.
+
+
+## Session: 2026-06-07 14:07:40 [0c6e9196]
+
+**User Request:**
+
+A strategy pattern should have:
+1. A BaseStrategy class > it's in base.py
+2. Various strategies
+3. A context class
+
+Here we are missing the context class (call it "GamePlanner" which has a strategy as an attribute and then a method "set_strategy" to overwrite the strategy and an "plan" method (that calls the strategy "order" method) - this is a key implemetaiton missing your implmentation
+
+**Claude Response:**
+
+All 13 tests pass. Here's what was added:
+
+**`utils/strategies/game_planner.py`** — new `GamePlanner` context class with:
+- `__init__(strategy)` — stores the initial strategy
+- `set_strategy(strategy)` — swaps the strategy at runtime
+- `plan(cards)` — delegates to `strategy.order(cards)`
+
+**`utils/strategies/__init__.py`** — `GamePlanner` added to imports and `__all__`.
+
+**`tests/strategies/test_strategies.py`** — 3 new tests covering delegation, strategy swapping, and no input mutation.
+
+
+## Session: 2026-06-07 14:08:19 [0c6e9196]
+
+**User Request:**
+
+<command-message>log-session</command-message>
+<command-name>/log-session</command-name>
+
+**Claude Response:**
+
+Session entry appended to `docs/ai_edit_log.md`.
+
+
+## Session: 2026-06-07 14:26:35 [f44d4b02]
+
+**User Request:**
+
+with regards to quiz_engine.py and the files in utils/strategies (and all the associated tests), plese run a code review following the instructions below:
+
+<role>
+Senior software engineer performing code review
+</role>
+
+<task>
+Analyze the code and the associated test provided by the user and provide your feedback.
+</task>
+
+<analysis_framework>
+Review for:
+
+1. Duplication
+   - Repeated code blocks
+   - Similar error handling patterns
+   - Duplicated formatting logic
+
+2. Magic Values
+   - Hard-coded strings (especially color codes)
+   - Hard-coded numbers
+   - Repeated literals
+
+3. Type Safety
+   - Missing type hints
+   - Incomplete type annotations
+   - Any types that could be more specific
+
+4. Complexity
+   - Methods doing multiple things
+   - Long methods (>30 lines)
+   - Deeply nested logic
+
+5. Code Smells
+   - Inconsistent naming
+   - Poor separation of concerns
+   - Unclear method purposes
+</analysis_framework>
+
+<ai_specific_checks>
+As the entire code was generated by the AI, you should look for these common pitfalls:
+1. Context gaps - AI might not fully understand the context of the code and the requirements and might not implement the code as expected.
+2. Phantom dependencies - AI might suggest libraries that don't exist or are outdated.
+3. Over-engineering - AI might suggest complex solutions that are not necessary for the problem at hand.
+4. Test theathre - AI might create an abundance of tests which cover Python standard libraries and/or focuses too much on the happy path and not enough on the edge cases.
+5. Architectural mismatches - AI might suggest code that does not match the architecture described in the @docs/ARCHITECTURE.md file.
+</ai_specific_checks>
+
+<format_checks>
+Please run the following commands to check the format of the code:
+```bash
+black <path/to/code>
+isort <path/to/code>
+flake8 <path/to/code>
+mypy <path/to/code>
+```
+</format_checks>
+
+<testing>
+Test should have a coverage of at least 80%.
+Run 
+```bash
+pytest --cov=. --cov-report=html
+```
+to see the coverage report.
+
+<output_format>
+For each of the two analysis frameworks, provide a list of issues found.
+For each issue found:
+- Line numbers or method name
+- Category (duplication, magic values, etc.)
+- Current code snippet
+- Suggested improvement
+- Benefit of change
+- Refactoring risk (LOW/MEDIUM/HIGH)
+
+For testing, please provide details on uncovered lines of code if test coverage is less than 80%.
+For formatting checks, please provide details on the issues found in a dedicated section.
+
+Save your output in docs/code-generation/strategies/code-review.md
+</output_format>
+
+**Claude Response:**
+
+Review saved to `docs/code-generation/strategies/code-review.md`. Here's the headline summary:
+
+**Critical issues (blocking)**
+- `QuizEngine.__init__` and `QuizEngine.run` both raise `NotImplementedError` — the class is an empty stub. Every test in `test_quiz_engine.py` fails at fixture instantiation.
+- `AdaptiveStrategy.order()` is also a stub (`raise NotImplementedError`), with zero tests.
+
+**Architectural mismatches**
+- `utils/strategies/__init__.py` exports `GamePlanner` and `get_strategy` (not mentioned in `ARCHITECTURE.md`) but omits `AdaptiveStrategy` (which the doc says should be exported).
+- `GamePlanner` duplicates the "context" role that `QuizEngine` already fills — it's over-engineered and absent from the architecture doc.
+
+**Coverage: 69% (below 80% threshold)**
+- `quiz_engine/quiz_engine.py`: 0% — blocked by the stub issue.
+- `strategies/adaptive.py`: 0% — no implementation, no tests.
+
+**Formatting (one file)**
+- `tests/strategies/test_strategies.py:4` — line too long (90 chars). Flagged by `black`, `isort`, and `flake8 E501`. Fix: wrap the import in parentheses.
+
+**Test theatre**
+- `test_sequential_returns_all_cards` / `test_random_returns_all_cards` test `len()` of a `list()` — they verify Python builtins, not strategy behaviour.
+- `RandomStrategy` is never tested for actually changing order, only for preserving elements.
+
+
+## Session: 2026-06-07 14:35:04 [f44d4b02]
+
+**User Request:**
+
+<command-message>log-session</command-message>
+<command-name>/log-session</command-name>
+
+**Claude Response:**
+
+Session logged to `docs/ai_edit_log.md`.
+
+
+## Session: 2026-06-07 14:38:31 [3f65e030]
+
+**User Request:**
+
+<role>
+Senior Python developer implementing fixes suggested by a code review.
+</role>
+
+<context>
+Code review is provided in submission/docs/code-generation/strategies/code-review.md
+</context>
+
+<task>
+Implement only suggested fixes provided below.
+</task>
+
+<suggested_fixes>
+Magic values:
+ISSUE 1
+STATUS: ACCEPT, drop the explicit list from the docstring
+
+Complexity:
+Issue 2
+STATUS: IGNORE, they will be implemented later in the next step.
+
+Issue 3:
+STATUS: IGNORE, the AdaptiveStrategy will be implemented later on.
+
+Issue 4:
+STATUS: ACCEPT, list the AdaptiveStrategy in the __all__ variable.
+
+Context gaps:
+Issue 5 and 6:
+STATUS: IGNORE
+
+OverEngineering:
+Issue 7
+STATUS: IGNORE, I plan to implement a different QuizEngine which will record a session and persist stuff to a database, so it will be conceptually different than the GamePlanner.
+
+Test Theatre
+Issue 8
+STATUS: ACCEPT, remove trivial assertsions
+
+Issue 9:
+STATUS: ACCEPT, that was a big miss
+
+Issue 10:
+STATUS: IGNORE, the AdaptiveStrategy will be implemented later on.
+
+Architectural mismatches:
+Issue 11
+STATUS: ACCEPT, use GamePlanner only
+
+Formatting checks:
+Issue flake8:
+Run black, isort and flake8 to fix the issues.
+</suggested_fixes>
+
+**Claude Response:**
+
+All 12 tests pass. Here's a summary of what was changed:
+
+**`utils/strategies/__init__.py`**
+- Issue 1: Replaced explicit `"sequential"` / `"random"` enumeration in the `get_strategy` docstring with a generic description (registry is the single source of truth).
+- Issue 4: Added `from .adaptive import AdaptiveStrategy` and `"AdaptiveStrategy"` to `__all__`.
+- Issue 11: Removed `"get_strategy"` from `__all__` — GamePlanner is now the only undocumented addition in the public surface.
+
+**`tests/strategies/test_strategies.py`**
+- Issue 8: Removed `test_sequential_returns_all_cards` and `test_random_returns_all_cards` (content-equality tests already subsume length).
+- Issue 9: Added `test_random_changes_order_statistically` — runs 50 shuffles and asserts more than one distinct order appears.
+- Flake8: black wrapped the long import line into parenthesised multi-line form; flake8 now clean.
+
+
+## Session: 2026-06-07 14:41:36 [3f65e030]
+
+**User Request:**
+
+<command-message>log-session</command-message>
+<command-name>/log-session</command-name>
+
+**Claude Response:**
+
+Session logged. The new entry covers the five accepted fixes applied this session: the docstring cleanup in `__init__.py`, `AdaptiveStrategy` added to `__all__`, `get_strategy` removed from `__all__`, two trivial test removals, the new statistical shuffle test, and the black/isort/flake8 formatting pass.
+
+
+## Session: 2026-06-07 14:46:21 [3f65e030]
+
+**User Request:**
+
+we are not testing for a GamePlanner with non-existing strategies. should we move the ceck of the get_stratgy inside the GamePlanner and move the gameplanner inside init.py?
+
+**Claude Response:**
+
+Session logged. The new entry covers the five accepted fixes applied this session: the docstring cleanup in `__init__.py`, `AdaptiveStrategy` added to `__all__`, `get_strategy` removed from `__all__`, two trivial test removals, the new statistical shuffle test, and the black/isort/flake8 formatting pass.
+
+
+## Session: 2026-06-07 14:47:07 [3f65e030]
+
+**User Request:**
+
+ok, thanks for the explanation
+
+**Claude Response:**
+
+The current design already handles it correctly: `GamePlanner` takes a concrete `QuizMode` instance, so invalid strategies are caught upstream by `get_strategy` — there's nothing to test on `GamePlanner` for an unknown mode, because the type system prevents it.
+
+Moving validation into `GamePlanner` would couple the context class to the registry, mixing two concerns (strategy selection vs strategy execution). And inlining `GamePlanner` into `__init__.py` would make that file do too much — it already owns the registry and factory.
+
+The gap, if anything, is that `get_strategy` already has a test for unknown mode (`test_factory_raises_for_unknown_mode`), so coverage is there. I'd leave the design as-is.
+
+
+## Session: 2026-06-07 14:47:26 [3f65e030]
+
+**User Request:**
+
+<command-message>log-session</command-message>
+<command-name>/log-session</command-name>
+
+**Claude Response:**
+
+Session logged — a short design-discussion entry noting the question, the reasoning, and that no code was changed.

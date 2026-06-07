@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from utils.models import Flashcard
 
 
-class QuizStrategy(ABC):
+class QuizMode(ABC):
     """Contract for all quiz-ordering strategies."""
 
     @abstractmethod

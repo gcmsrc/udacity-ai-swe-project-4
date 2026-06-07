@@ -1,13 +1,18 @@
 import pytest
 
 from utils.models import Flashcard
-from utils.strategies import AdaptiveStrategy, RandomStrategy, SequentialStrategy
-from utils.strategies.base import QuizStrategy
-
+from utils.strategies import (
+    GamePlanner,
+    RandomStrategy,
+    SequentialStrategy,
+    get_strategy,
+)
+from utils.strategies.base import QuizMode
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def deck() -> list[Flashcard]:
@@ -19,27 +24,24 @@ def deck() -> list[Flashcard]:
 
 
 # ---------------------------------------------------------------------------
-# QuizStrategy ABC
+# QuizMode ABC
 # ---------------------------------------------------------------------------
+
 
 def test_quiz_strategy_is_abstract() -> None:
     """Instantiating the ABC directly must raise TypeError."""
     with pytest.raises(TypeError):
-        QuizStrategy()  # type: ignore[abstract]
+        QuizMode()  # type: ignore[abstract]
 
 
 # ---------------------------------------------------------------------------
 # SequentialStrategy
 # ---------------------------------------------------------------------------
 
+
 def test_sequential_preserves_order(deck: list[Flashcard]) -> None:
     result = SequentialStrategy().order(deck)
     assert result == deck
-
-
-def test_sequential_returns_all_cards(deck: list[Flashcard]) -> None:
-    result = SequentialStrategy().order(deck)
-    assert len(result) == len(deck)
 
 
 def test_sequential_does_not_mutate_input(deck: list[Flashcard]) -> None:
@@ -52,14 +54,15 @@ def test_sequential_does_not_mutate_input(deck: list[Flashcard]) -> None:
 # RandomStrategy
 # ---------------------------------------------------------------------------
 
+
 def test_random_returns_same_cards(deck: list[Flashcard]) -> None:
     result = RandomStrategy().order(deck)
     assert sorted(result, key=lambda c: c.front) == sorted(deck, key=lambda c: c.front)
 
 
-def test_random_returns_all_cards(deck: list[Flashcard]) -> None:
-    result = RandomStrategy().order(deck)
-    assert len(result) == len(deck)
+def test_random_changes_order_statistically(deck: list[Flashcard]) -> None:
+    orders = [tuple(c.front for c in RandomStrategy().order(deck)) for _ in range(50)]
+    assert len(set(orders)) > 1, "RandomStrategy never produced a different order"
 
 
 def test_random_does_not_mutate_input(deck: list[Flashcard]) -> None:
@@ -69,34 +72,41 @@ def test_random_does_not_mutate_input(deck: list[Flashcard]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# AdaptiveStrategy
+# get_strategy factory
 # ---------------------------------------------------------------------------
 
-def test_adaptive_missed_cards_come_first(deck: list[Flashcard]) -> None:
-    missed = ["GPU"]
-    result = AdaptiveStrategy(missed=missed).order(deck)
-    assert result[0].front == "GPU"
+
+def test_factory_returns_sequential() -> None:
+    assert isinstance(get_strategy("sequential"), SequentialStrategy)
 
 
-def test_adaptive_all_cards_present(deck: list[Flashcard]) -> None:
-    missed = ["RAM"]
-    result = AdaptiveStrategy(missed=missed).order(deck)
-    assert len(result) == len(deck)
+def test_factory_returns_random() -> None:
+    assert isinstance(get_strategy("random"), RandomStrategy)
 
 
-def test_adaptive_no_missed_preserves_order(deck: list[Flashcard]) -> None:
-    result = AdaptiveStrategy().order(deck)
-    assert result == deck
+def test_factory_raises_for_unknown_mode() -> None:
+    with pytest.raises(ValueError, match="Unknown strategy"):
+        get_strategy("adaptive")
 
 
-def test_adaptive_multiple_missed_all_appear_first(deck: list[Flashcard]) -> None:
-    missed = ["GPU", "RAM"]
-    result = AdaptiveStrategy(missed=missed).order(deck)
-    missed_fronts = {c.front for c in result[: len(missed)]}
-    assert missed_fronts == set(missed)
+# ---------------------------------------------------------------------------
+# GamePlanner context
+# ---------------------------------------------------------------------------
 
 
-def test_adaptive_does_not_mutate_input(deck: list[Flashcard]) -> None:
+def test_game_planner_plan_delegates_to_strategy(deck: list[Flashcard]) -> None:
+    planner = GamePlanner(SequentialStrategy())
+    assert planner.plan(deck) == deck
+
+
+def test_game_planner_set_strategy_changes_behaviour(deck: list[Flashcard]) -> None:
+    planner = GamePlanner(SequentialStrategy())
+    planner.set_strategy(RandomStrategy())
+    result = planner.plan(deck)
+    assert sorted(result, key=lambda c: c.front) == sorted(deck, key=lambda c: c.front)
+
+
+def test_game_planner_does_not_mutate_input(deck: list[Flashcard]) -> None:
     original = list(deck)
-    AdaptiveStrategy(missed=["RAM"]).order(deck)
+    GamePlanner(RandomStrategy()).plan(deck)
     assert deck == original

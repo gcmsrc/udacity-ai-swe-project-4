@@ -1,8 +1,8 @@
 from utils.models import Flashcard
-from utils.strategies.base import QuizStrategy
+from utils.strategies.base import QuizMode
 
 
-class AdaptiveStrategy(QuizStrategy):
+class AdaptiveStrategy(QuizMode):
     """Present previously-missed cards first, then the rest.
 
     Args:

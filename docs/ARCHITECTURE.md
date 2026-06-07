@@ -6,7 +6,7 @@
 |---|---|
 | `utils/models/` | Data classes: `Flashcard`, `SessionResult` |
 | `utils/data_loader/` | Load and validate JSON; raise user-friendly errors |
-| `utils/strategies/` | `QuizStrategy` ABC + Sequential / Random / Adaptive implementations |
+| `utils/strategies/` | `QuizMode` ABC + Sequential / Random / Adaptive implementations |
 | `utils/quiz_engine/` | Runs the quiz loop; owns answer-checking and score tracking |
 | `utils/ui/` | All terminal I/O: prompts, feedback, summary table |
 | `main.py` | Typer app; wires CLI args → data loader → strategy → engine → ui |
@@ -17,12 +17,12 @@
 
 ### Strategy Pattern — Quiz Modes
 
-`QuizStrategy` is an **Abstract Base Class** (ABC) with one abstract method. The ABC enforces the contract at class-definition time: any concrete subclass that omits `order()` raises `TypeError` on instantiation, which catches mistakes early rather than at runtime.
+`QuizMode` is an **Abstract Base Class** (ABC) with one abstract method. The ABC enforces the contract at class-definition time: any concrete subclass that omits `order()` raises `TypeError` on instantiation, which catches mistakes early rather than at runtime.
 
 ```python
 from abc import ABC, abstractmethod
 
-class QuizStrategy(ABC):
+class QuizMode(ABC):
     @abstractmethod
     def order(self, cards: list[Flashcard]) -> list[Flashcard]: ...
 ```
@@ -39,7 +39,7 @@ Three concrete strategies subclass it:
 `Protocol` gives structural (duck-typed) compatibility — anything with a matching signature qualifies. `ABC` gives nominal enforcement — only explicit subclasses are valid strategies, and forgetting to implement `order()` is a hard error at instantiation. For an internal tool where all strategies live in the same repo, this stricter contract is preferable: mistakes are caught immediately rather than silently passing type-checkers.
 
 **Why Strategy here?**  
-Each mode is a different algorithm for *ordering* the same deck. Swapping modes at runtime (from a CLI flag) maps directly to choosing a strategy object. Adding "Spaced Repetition" later means subclassing `QuizStrategy` — nothing else changes.
+Each mode is a different algorithm for *ordering* the same deck. Swapping modes at runtime (from a CLI flag) maps directly to choosing a strategy object. Adding "Spaced Repetition" later means subclassing `QuizMode` — nothing else changes.
 
 ### Data Classes — Models
 
@@ -94,8 +94,8 @@ submission/
 │   │   ├── __init__.py              # exports: load_flashcards
 │   │   └── data_loader.py
 │   ├── strategies/
-│   │   ├── __init__.py              # exports: QuizStrategy, SequentialStrategy, RandomStrategy, AdaptiveStrategy
-│   │   ├── base.py                  # QuizStrategy ABC
+│   │   ├── __init__.py              # exports: QuizMode, SequentialStrategy, RandomStrategy, AdaptiveStrategy
+│   │   ├── base.py                  # QuizMode ABC
 │   │   ├── sequential.py
 │   │   ├── random_strategy.py
 │   │   └── adaptive.py
@@ -128,7 +128,7 @@ Each package's `__init__.py` re-exports the public surface so callers import fro
 
 ```python
 # utils/strategies/__init__.py
-from .base import QuizStrategy
+from .base import QuizMode
 from .sequential import SequentialStrategy
 from .random_strategy import RandomStrategy
 from .adaptive import AdaptiveStrategy
@@ -155,9 +155,9 @@ class SessionResult:
     missed: list[str]   # list of `front` values the user got wrong
 ```
 
-### `QuizStrategy` ABC (`utils/strategies/base.py`)
+### `QuizMode` ABC (`utils/strategies/base.py`)
 ```python
-class QuizStrategy(ABC):
+class QuizMode(ABC):
     @abstractmethod
     def order(self, cards: list[Flashcard]) -> list[Flashcard]: ...
 ```
@@ -202,7 +202,7 @@ Both formats are equivalent. The wrapped format (`{"cards": [...]}`) exists to a
 ### `QuizEngine` (`utils/quiz_engine/`)
 ```python
 class QuizEngine:
-    def __init__(self, strategy: QuizStrategy, ui: UI) -> None: ...
+    def __init__(self, strategy: QuizMode, ui: UI) -> None: ...
     def run(self, cards: list[Flashcard]) -> SessionResult: ...
 ```
 
@@ -212,7 +212,7 @@ class QuizEngine:
 
 ### Adding a new quiz mode
 
-1. Create a new file in `utils/strategies/` subclassing `QuizStrategy` and implementing `order()`.
+1. Create a new file in `utils/strategies/` subclassing `QuizMode` and implementing `order()`.
 2. Re-export the new class from `utils/strategies/__init__.py`.
 3. Add the mode name → class mapping in `main.py`.
 4. Add tests in `tests/strategies/test_strategies.py`.
@@ -222,7 +222,7 @@ No other files need to change.
 ### Example: Spaced Repetition
 ```python
 # utils/strategies/spaced_repetition.py
-class SpacedRepetitionStrategy(QuizStrategy):
+class SpacedRepetitionStrategy(QuizMode):
     def __init__(self, due_dates: dict[str, date]) -> None:
         self.due_dates = due_dates
 

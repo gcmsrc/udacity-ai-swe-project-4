@@ -1,15 +1,15 @@
 from utils.models import Flashcard, SessionResult
-from utils.strategies.base import QuizStrategy
+from utils.strategies.base import QuizMode
 from utils.ui import UI
 
 
 class QuizEngine:
     """Drives the quiz loop: present cards, collect answers, track score."""
 
-    def __init__(self, strategy: QuizStrategy, ui: UI) -> None:
+    def __init__(self, strategy: QuizMode, ui: UI) -> None:
         """Args:
-            strategy: determines card ordering.
-            ui: handles all terminal I/O.
+        strategy: determines card ordering.
+        ui: handles all terminal I/O.
         """
         raise NotImplementedError
 
