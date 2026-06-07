@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner, Result
@@ -100,12 +100,53 @@ def test_adaptive_mode_succeeds(runner: CliRunner, deck_file: Path) -> None:
     assert result.exit_code == 0
 
 
+# ---------------------------------------------------------------------------
+# Renderer selection — --plain-terminal flag
+# ---------------------------------------------------------------------------
+
+
+def _run_and_capture_ui(
+    runner: CliRunner, deck_file: Path, extra_args: list[str]
+) -> tuple[Result, MagicMock, MagicMock]:
+    """Invoke the command with DB/engine/UI classes mocked; return the mocks."""
+    fake_result = SessionResult(total=1, correct=1, missed=[])
+    with (
+        patch("flashcard_quiz.main.DatabaseConnection"),
+        patch("flashcard_quiz.main.SessionRepository") as mock_repo_cls,
+        patch("flashcard_quiz.main.QuizEngine") as mock_engine_cls,
+        patch("flashcard_quiz.main.TerminalRichUI") as mock_rich,
+        patch("flashcard_quiz.main.TerminalUI") as mock_plain,
+    ):
+        mock_repo_cls.return_value.create_session.return_value = "test-session-id"
+        mock_engine_cls.return_value.run.return_value = fake_result
+        result = runner.invoke(app, [str(deck_file), *extra_args])
+    return result, mock_rich, mock_plain
+
+
+def test_default_uses_rich_ui(runner: CliRunner, deck_file: Path) -> None:
+    result, mock_rich, mock_plain = _run_and_capture_ui(runner, deck_file, [])
+    assert result.exit_code == 0
+    mock_rich.assert_called_once()
+    mock_plain.assert_not_called()
+
+
+def test_plain_terminal_flag_uses_plain_ui(
+    runner: CliRunner, deck_file: Path
+) -> None:
+    result, mock_rich, mock_plain = _run_and_capture_ui(
+        runner, deck_file, ["--plain-terminal"]
+    )
+    assert result.exit_code == 0
+    mock_plain.assert_called_once()
+    mock_rich.assert_not_called()
+
+
 def test_summary_score_printed(runner: CliRunner, deck_file: Path) -> None:
     fake_result = SessionResult(total=2, correct=1, missed=["CPU"])
     result = _run_with_mocked_db_and_engine(
         runner, deck_file, "sequential", fake_result
     )
-    assert "1/2" in result.output
+    assert "50%" in result.output
 
 
 def test_summary_missed_cards_printed(runner: CliRunner, deck_file: Path) -> None:

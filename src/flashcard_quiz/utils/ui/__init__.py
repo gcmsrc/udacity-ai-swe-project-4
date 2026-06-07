@@ -1,3 +1,3 @@
-from .ui import UI, TerminalUI
+from .ui import UI, TerminalRichUI, TerminalUI
 
-__all__ = ["UI", "TerminalUI"]
+__all__ = ["UI", "TerminalUI", "TerminalRichUI"]

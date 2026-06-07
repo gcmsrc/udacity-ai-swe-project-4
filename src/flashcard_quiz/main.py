@@ -17,7 +17,7 @@ from flashcard_quiz.utils.data_loader import load_flashcards
 from flashcard_quiz.utils.db import DatabaseConnection, SessionRepository
 from flashcard_quiz.utils.quiz_engine import QuizEngine
 from flashcard_quiz.utils.strategies import get_strategy
-from flashcard_quiz.utils.ui import TerminalUI
+from flashcard_quiz.utils.ui import TerminalRichUI, TerminalUI
 
 app = typer.Typer(help="CLI flashcard quiz application.")
 
@@ -29,6 +29,13 @@ def main(
         str,
         typer.Option(help="Quiz mode: sequential | random | adaptive."),
     ] = "sequential",
+    plain_terminal: Annotated[
+        bool,
+        typer.Option(
+            "--plain-terminal",
+            help="Use the plain text UI instead of the rich-styled one.",
+        ),
+    ] = False,
 ) -> None:
     """Run an interactive flashcard quiz session.
 
@@ -36,6 +43,8 @@ def main(
         deck: Path to a JSON flashcard deck file.
         mode: Quiz ordering mode; one of ``sequential``, ``random``, or
               ``adaptive``.
+        plain_terminal: If set, render with the plain ``TerminalUI``; otherwise
+              use the default rich-styled ``TerminalRichUI``.
 
     Raises:
         typer.Exit: with code 1 on an unknown mode or deck-loading failure.
@@ -56,7 +65,7 @@ def main(
         repo = SessionRepository(db)
         session_id = repo.create_session(str(deck))
 
-        ui = TerminalUI()
+        ui = TerminalUI() if plain_terminal else TerminalRichUI()
         engine = QuizEngine(strategy=strategy, ui=ui)
         result = engine.run(cards)
 

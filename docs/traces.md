@@ -2399,3 +2399,134 @@ instead of using the mckinsey jfrog in the uv.lock, can you change the url to be
 **Claude Response:**
 
 All JFrog URLs are gone. Added a project-level `uv.toml` with `index-url = "https://pypi.org/simple"` to override your global McKinsey config, then regenerated `uv.lock` — all URLs now point to `pypi.org` / `files.pythonhosted.org`.
+
+
+## Session: 2026-06-07 20:27:20 [4ef0d153]
+
+**User Request:**
+
+<role>
+Senior Python developer following SOLID principles
+</role>
+<task>
+Update the architecture document to include a more visually appealing RICH ui.
+</task>
+
+<architecture_decisions>
+P<role>
+Senior Python developer following SOLID principles
+</role>
+<task>
+Update the architecture document to include integration of a `typer` app in the main.py file to handle the CLI interface.
+</task>
+
+<architecture_decisions>
+Please refer https://github.com/textualize/rich to learn how to use rich.
+There shoudl be no changes to the UI logic, this is a pure esthetic improvement.
+</architecture_decisions>
+
+<deliverables>
+Create a TerminalRichUI class that will be used to display the UI.
+</deliverables>
+
+**Claude Response:**
+
+The architecture document is updated. Here's what I changed in `docs/ARCHITECTURE.md`:
+
+1. **§1 Module Overview** — the `utils/ui/` row now states there's a `UI` Protocol with two implementations: `TerminalUI` (plain) and `TerminalRichUI` (`rich`-styled).
+
+2. **§2 Design Patterns** — added a **"UI Protocol — Pluggable Renderers"** subsection explaining that both renderers satisfy the same Protocol, why a second renderer is added rather than editing the first, that `TerminalRichUI` is a **pure aesthetic** layer (identical control flow/outcomes, only presentation differs), what it renders (styled prompt, colored feedback panels, bordered summary table), and how it stays testable via an injectable `Console`.
+
+3. **§5 Application Flow** — added the `ui = TerminalRichUI()` construction step as the default renderer.
+
+4. **§6 Key Interfaces** — documented the `UI` Protocol and the new `TerminalRichUI` class signature, noting it drops into `QuizEngine` exactly where `TerminalUI` was, with no other change required.
+
+Key design points captured: the change is purely aesthetic, leverages the existing `UI` Protocol (no engine/strategy/business-logic changes), keeps `TerminalUI` as a zero-dependency fallback, and `rich` is already a declared dependency (`rich>=13` in `pyproject.toml`).
+
+This task updates only the architecture document, per the task framing. Want me to follow up with the actual `TerminalRichUI` implementation in `src/flashcard_quiz/utils/ui/ui.py` (plus tests and the `main.py` wiring)?
+
+
+## Session: 2026-06-07 20:32:40 [4ef0d153]
+
+**User Request:**
+
+can you now implement the Terminal Rich UI? Pleas use emojis, coloured fonts and make it look more visually appealing
+
+**Claude Response:**
+
+Everything works end-to-end. The implementation is complete and verified.
+
+## Summary
+
+I implemented `TerminalRichUI` as a pure-aesthetic, drop-in replacement for `TerminalUI` — same I/O behaviour, richer rendering.
+
+**Changes:**
+
+1. **`src/flashcard_quiz/utils/ui/ui.py`** — added `TerminalRichUI`, satisfying the existing `UI` Protocol. It owns a `rich.console.Console` (injectable for testing) and renders:
+   - **Prompt** — cyan-bordered `Flashcard` panel with a ❓ emoji and bold-cyan question, plus a styled magenta `➜ Your answer:` prompt.
+   - **Feedback** — green ✅ `Correct!` panel, or red ❌ `Wrong.` panel showing the expected answer.
+   - **Summary** — a 📊 blue score table (Total / Correct / Score%) plus a yellow 📌 `Missed:` panel when applicable.
+
+2. **`utils/ui/__init__.py`** — exported `TerminalRichUI`.
+
+3. **`main.py`** — wired the quiz to use `TerminalRichUI()` as the default renderer.
+
+4. **`tests/ui/test_ui.py`** — added 6 tests for `TerminalRichUI` mirroring the `TerminalUI` suite, capturing output via a `Console(file=StringIO())`.
+
+5. **`tests/main/test_main.py`** — updated the one assertion that checked the old `"1/2"` format to the new `"50%"` score (the summary format intentionally changed).
+
+**Verification:** all 90 tests pass, `mypy --strict` clean, `flake8` clean, `black`/`isort` clean, and a live run confirms the colored panels, emojis, and summary table render correctly.
+
+Note: I used emojis here because you explicitly asked for them — this overrides the global "no emojis" preference, and they're confined to user-facing UI output (not code/logging). 
+
+Want me to keep `TerminalUI` as a `--plain` CLI flag so users can opt out of the rich rendering, or log this session to `docs/ai_edit_log.md`?
+
+
+## Session: 2026-06-07 20:37:50 [4ef0d153]
+
+**User Request:**
+
+shoulnd't we implemen the TerminalRichUI as a decorator? I think it would make more sense. Also the tests seem quite overalpping with the TerminalUI?
+
+**Claude Response:**
+
+All green. Here's where things landed.
+
+## Decorator — recommend against (kept as sibling)
+`TerminalRichUI` doesn't delegate to or augment `TerminalUI`; it replaces its rendering entirely. A decorator that ignores the object it wraps isn't a decorator — it's replacement with extra indirection. The correct model is two interchangeable `UI` Protocol implementations, which is what we have. The Protocol still leaves room for *genuine* decorators later (e.g. a `RecordingUI`/`TimingUI` that wraps either renderer). Say the word if you want me to switch it anyway.
+
+## Tests — de-duplicated via parametrization
+- The shared **Protocol contract** (strip input, hide expected on correct, show expected + "Wrong" on miss, report counts/percentage/missed, omit missed-section when empty) is now written **once** and run against both renderers — you can see `[plain]`/`[rich]` variants in the output.
+- Only the **genuinely divergent** behaviour is split into two tests: `TerminalUI` puts the card front in the `input()` prompt argument, while `TerminalRichUI` renders it to the console first.
+- This works because `rich.Console.input` delegates to the builtin `input()` (I verified that empirically before relying on it), so one `patch("builtins.input")` + `capsys` capture drives both.
+
+Net: **12 tests** (was 18 with heavy overlap), all passing; full suite **84 passed**; `mypy --strict` and `flake8` clean.
+
+One side effect worth noting: the test count dropped from 18→12 here but the *coverage* is unchanged — same assertions, just not duplicated. Want me to add a single rich-specific assertion (e.g. that the summary emits its `📊`/panel decoration) to lock in that the rich path is actually exercised and won't silently regress to plain output?
+
+
+## Session: 2026-06-07 20:43:16 [4ef0d153]
+
+**User Request:**
+
+can you add a flag to the main command (just a flag "--plain-terminal" which, if sets, use the TerminalUI, therwise the default option si the TerminalRichUI
+
+**Claude Response:**
+
+Done. The `--plain-terminal` flag works end-to-end.
+
+## Summary
+
+**`src/flashcard_quiz/main.py`:**
+- Added a `--plain-terminal` boolean option (defaults to `False`), documented in the docstring and `--help`.
+- Renderer selection: `ui = TerminalUI() if plain_terminal else TerminalRichUI()` — rich is the default, plain is opt-in.
+
+**`tests/main/test_main.py`:**
+- Added two tests that patch both UI classes and assert which one is instantiated: `test_default_uses_rich_ui` (rich called, plain not) and `test_plain_terminal_flag_uses_plain_ui` (plain called, rich not).
+
+**Verification:**
+- `--plain-terminal` renders the plain `Result: 0/5 (0%)` / `Missed:` output (no panels/emojis); default still renders rich.
+- `--help` lists the new flag with its description.
+- Full suite: **86 passed**; `mypy --strict` and `flake8` clean.
+
+The architecture doc (§5) already notes the renderer is swappable; want me to update it to document the `--plain-terminal` flag explicitly in the Arguments/Options table?

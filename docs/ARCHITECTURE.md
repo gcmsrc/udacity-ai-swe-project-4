@@ -8,7 +8,7 @@
 | `utils/data_loader/` | Load and validate JSON; raise user-friendly errors |
 | `utils/strategies/` | `QuizMode` ABC + Sequential / Random / Adaptive implementations |
 | `utils/quiz_engine/` | Runs the quiz loop; owns answer-checking and score tracking |
-| `utils/ui/` | All terminal I/O: prompts, feedback, summary table |
+| `utils/ui/` | All terminal I/O via the `UI` Protocol; `TerminalUI` (plain) and `TerminalRichUI` (`rich`-styled) implementations |
 | `utils/db/` | Singleton DB connection; session creation and result persistence |
 | `main.py` | Typer app; wires CLI args → data loader → strategy → engine → ui |
 
@@ -69,6 +69,26 @@ A singleton class exposes a clear interface (`connect`, `disconnect`, `execute`)
 ### Data Classes — Models
 
 Plain `dataclass` objects carry data between layers. No business logic lives in models.
+
+### UI Protocol — Pluggable Renderers
+
+All terminal I/O sits behind a `UI` **Protocol** (structural subtyping, PEP 544). `QuizEngine` is typed against `UI` and calls three methods — `prompt_answer`, `show_feedback`, `show_summary` — without knowing the concrete renderer. Two implementations satisfy it:
+
+| Class | Backend | Use |
+|---|---|---|
+| `TerminalUI` | built-in `print` / `input` | Minimal, dependency-free fallback |
+| `TerminalRichUI` | [`rich`](https://github.com/textualize/rich) | Default: styled prompts, colored feedback, bordered summary table |
+
+**Why a second renderer instead of editing the first?**
+The two classes are interchangeable because they share the same Protocol. `TerminalRichUI` is a **pure aesthetic** layer — it reproduces the exact same control flow and outcomes as `TerminalUI` (same prompts, same correct/wrong decisions, same summary content) and only changes *presentation*. Keeping `TerminalUI` intact preserves a zero-dependency fallback and makes the visual upgrade a drop-in swap in `main.py`, with no change to `QuizEngine`, strategies, or any business logic.
+
+`TerminalRichUI` owns a single `rich.console.Console` instance and renders:
+
+- **Prompt** — the card front styled with `Console.input` (bold cyan question, dim prompt arrow).
+- **Feedback** — a green `Correct!` panel, or a red panel showing the expected answer on a miss.
+- **Summary** — a `rich.table.Table` with the score and pass-ratio, plus a panel listing any missed cards.
+
+Because `rich` writes to a `Console`, output is fully testable: tests construct the console with `Console(file=io.StringIO(), force_terminal=False)` and assert on the captured text, mirroring how `TerminalUI` is tested against `capsys`.
 
 ---
 
@@ -220,6 +240,7 @@ main(deck_file, mode)
   ├── DatabaseConnection().connect(db_path)
   ├── SessionRepository.create_session(deck_file)   → session_id
   ├── strategy.order(cards)                         → ordered list[Flashcard]
+  ├── ui = TerminalRichUI()                         → default rich renderer
   ├── QuizEngine(strategy, ui).run(cards)           → SessionResult
   ├── SessionRepository.save_session_result(session_id, result)
   ├── ui.show_summary(result)
@@ -313,12 +334,47 @@ Supported JSON schemas:
 
 Both formats are equivalent. The wrapped format (`{"cards": [...]}`) exists to accommodate deck files that carry additional top-level metadata alongside the card list.
 
+### `UI` Protocol (`utils/ui/`)
+```python
+class UI(Protocol):
+    """Terminal I/O contract — any object with these methods qualifies."""
+
+    def prompt_answer(self, card: Flashcard) -> str: ...
+    def show_feedback(self, correct: bool, expected: str) -> None: ...
+    def show_summary(self, result: SessionResult) -> None: ...
+```
+
+### `TerminalRichUI` (`utils/ui/`)
+```python
+class TerminalRichUI:
+    """`rich`-styled implementation of the UI Protocol.
+
+    Aesthetic-only: identical I/O behaviour to TerminalUI, richer rendering.
+    """
+
+    def __init__(self, console: Console | None = None) -> None:
+        """Use the given Console, or create a default one."""
+
+    def prompt_answer(self, card: Flashcard) -> str:
+        """Show the styled card front; return the user's answer (stripped)."""
+
+    def show_feedback(self, correct: bool, expected: str) -> None:
+        """Render a green 'Correct!' panel, or a red panel with the answer."""
+
+    def show_summary(self, result: SessionResult) -> None:
+        """Render a score table and a panel listing any missed cards."""
+```
+
+`TerminalRichUI` is injected into `QuizEngine` exactly where `TerminalUI` was. `main.py` constructs it as the default renderer; swapping back to `TerminalUI` requires no other change. The optional `console` parameter exists for testing — pass a `Console(file=StringIO())` to capture output.
+
 ### `QuizEngine` (`utils/quiz_engine/`)
 ```python
 class QuizEngine:
     def __init__(self, strategy: QuizMode, ui: UI) -> None: ...
     def run(self, cards: list[Flashcard]) -> SessionResult: ...
 ```
+
+`QuizEngine` accepts any `UI` — `TerminalUI` or `TerminalRichUI` — via constructor injection.
 
 ### `DatabaseConnection` (`utils/db/connection.py`)
 ```python
