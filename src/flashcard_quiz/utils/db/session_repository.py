@@ -1,9 +1,7 @@
 """Session persistence layer — stores quiz sessions and serialised results."""
 
-import json
 import uuid
 from datetime import datetime, timezone
-from typing import cast
 
 from flashcard_quiz.utils.db.connection import DatabaseConnection
 from flashcard_quiz.utils.models import SessionResult
@@ -12,12 +10,6 @@ _SQL_INSERT_SESSION = (
     "INSERT INTO sessions (id, dataset, created_at, result) VALUES (?, ?, ?, NULL)"
 )
 _SQL_UPDATE_RESULT = "UPDATE sessions SET result = ? WHERE id = ?"
-_SQL_GET_LAST_RESULT = """
-    SELECT result FROM sessions
-     WHERE dataset = ? AND result IS NOT NULL
-     ORDER BY created_at DESC
-     LIMIT 1
-    """
 
 
 class SessionRepository:
@@ -64,23 +56,3 @@ class SessionRepository:
             sqlite3.OperationalError: if the database cannot be accessed.
         """
         self.db.execute(_SQL_UPDATE_RESULT, (result.to_json(), session_id))
-
-    def get_missed_cards(self, dataset: str) -> list[str]:
-        """Return the missed card fronts from the most recent session for this dataset.
-
-        Args:
-            dataset: path or name of the JSON deck.
-
-        Returns:
-            List of ``card_front`` strings answered incorrectly in the last
-            completed session, or an empty list if no completed session exists.
-
-        Raises:
-            sqlite3.OperationalError: if the database cannot be accessed.
-        """
-        rows = self.db.execute(_SQL_GET_LAST_RESULT, (dataset,))
-        if not rows:
-            return []
-        result_data: dict[str, object] = json.loads(str(rows[0]["result"]))
-        missed = cast(list[object], result_data.get("missed", []))
-        return [str(m) for m in missed]

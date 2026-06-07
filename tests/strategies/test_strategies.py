@@ -3,7 +3,6 @@ import pytest
 from flashcard_quiz.utils.models import Flashcard
 from flashcard_quiz.utils.strategies import (
     AdaptiveStrategy,
-    GamePlanner,
     RandomStrategy,
     SequentialStrategy,
     get_strategy,
@@ -161,6 +160,13 @@ def test_adaptive_get_next_card_before_setup_raises() -> None:
         s.get_next_card()
 
 
+def test_adaptive_record_result_before_setup_raises() -> None:
+    s = AdaptiveStrategy()
+    card = Flashcard("CPU", "Central Processing Unit")
+    with pytest.raises(RuntimeError, match=r"call setup\(\) before record_result\(\)"):
+        s.record_result(card, correct=False)
+
+
 def test_adaptive_record_result_unknown_card_raises(deck: list[Flashcard]) -> None:
     s = AdaptiveStrategy()
     s.setup(deck)
@@ -176,8 +182,6 @@ def test_adaptive_missed_increase_weight_multiple_times() -> None:
     s.setup([card])
 
     s.record_result(card, correct=False)
-    current_weight = s._weights[0]
-
     current_weight = s._weights[0]
     s.record_result(card, correct=False)
     assert s._weights[0] > current_weight
@@ -216,21 +220,3 @@ def test_factory_returns_adaptive() -> None:
 def test_factory_raises_for_unknown_mode() -> None:
     with pytest.raises(ValueError, match="Unknown strategy"):
         get_strategy("unknown")
-
-
-# ---------------------------------------------------------------------------
-# GamePlanner context
-# ---------------------------------------------------------------------------
-
-
-def test_game_planner_exposes_strategy() -> None:
-    strategy = SequentialStrategy()
-    planner = GamePlanner(strategy)
-    assert planner._strategy is strategy
-
-
-def test_game_planner_set_strategy_replaces_strategy() -> None:
-    planner = GamePlanner(SequentialStrategy())
-    new_strategy = RandomStrategy()
-    planner.set_strategy(new_strategy)
-    assert planner._strategy is new_strategy

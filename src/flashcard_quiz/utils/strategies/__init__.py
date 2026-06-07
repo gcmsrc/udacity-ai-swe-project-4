@@ -2,7 +2,6 @@
 
 from .adaptive import AdaptiveStrategy
 from .base import QuizMode
-from .game_planner import GamePlanner
 from .random_strategy import RandomStrategy
 from .sequential import SequentialStrategy
 
@@ -11,7 +10,6 @@ __all__ = [
     "SequentialStrategy",
     "RandomStrategy",
     "AdaptiveStrategy",
-    "GamePlanner",
 ]
 
 _REGISTRY: dict[str, type[QuizMode]] = {

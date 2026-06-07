@@ -50,8 +50,11 @@ class AdaptiveStrategy(QuizMode):
             correct: ``True`` if the answer was correct, ``False`` otherwise.
 
         Raises:
+            RuntimeError: If ``setup()`` has not been called.
             ValueError: If *card* is not part of the current deck.
         """
+        if self._cards is None:
+            raise RuntimeError("call setup() before record_result()")
         if card.front not in self._card_index:
             raise ValueError(f"Card '{card.front}' not found in the current deck")
         idx = self._card_index[card.front]

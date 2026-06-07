@@ -4,7 +4,7 @@ from flashcard_quiz.utils.models import Flashcard, SessionResult
 
 
 class UI(Protocol):
-    """Structural interface for terminal I/O — any object with these methods qualifies."""
+    """Terminal I/O protocol — any object with these methods qualifies."""
 
     def prompt_answer(self, card: Flashcard) -> str: ...
     def show_feedback(self, correct: bool, expected: str) -> None: ...

@@ -2,10 +2,10 @@
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-from typer.testing import CliRunner
+from typer.testing import CliRunner, Result
 
 from flashcard_quiz.main import app
 from flashcard_quiz.utils.models import SessionResult
@@ -20,9 +20,7 @@ def runner() -> CliRunner:
 def deck_file(tmp_path: Path) -> Path:
     """A valid single-card deck JSON file."""
     path = tmp_path / "deck.json"
-    path.write_text(
-        json.dumps([{"front": "CPU", "back": "Central Processing Unit"}])
-    )
+    path.write_text(json.dumps([{"front": "CPU", "back": "Central Processing Unit"}]))
     return path
 
 
@@ -37,18 +35,14 @@ def test_unknown_mode_exits_with_error(runner: CliRunner, deck_file: Path) -> No
     assert "bogus" in result.output
 
 
-def test_missing_deck_file_exits_with_error(
-    runner: CliRunner, tmp_path: Path
-) -> None:
+def test_missing_deck_file_exits_with_error(runner: CliRunner, tmp_path: Path) -> None:
     missing = tmp_path / "nope.json"
     result = runner.invoke(app, [str(missing)])
     assert result.exit_code == 1
     assert "nope.json" in result.output
 
 
-def test_invalid_json_deck_exits_with_error(
-    runner: CliRunner, tmp_path: Path
-) -> None:
+def test_invalid_json_deck_exits_with_error(runner: CliRunner, tmp_path: Path) -> None:
     bad_file = tmp_path / "bad.json"
     bad_file.write_text("not json at all")
     result = runner.invoke(app, [str(bad_file)])
@@ -74,7 +68,7 @@ def _run_with_mocked_db_and_engine(
     deck_file: Path,
     mode: str,
     fake_result: SessionResult,
-) -> "CliRunner":
+) -> Result:
     """Invoke the quiz command with DB and engine mocked out."""
     with (
         patch("flashcard_quiz.main.DatabaseConnection"),
@@ -88,7 +82,9 @@ def _run_with_mocked_db_and_engine(
 
 def test_sequential_mode_succeeds(runner: CliRunner, deck_file: Path) -> None:
     fake_result = SessionResult(total=1, correct=1, missed=[])
-    result = _run_with_mocked_db_and_engine(runner, deck_file, "sequential", fake_result)
+    result = _run_with_mocked_db_and_engine(
+        runner, deck_file, "sequential", fake_result
+    )
     assert result.exit_code == 0
 
 
@@ -106,13 +102,17 @@ def test_adaptive_mode_succeeds(runner: CliRunner, deck_file: Path) -> None:
 
 def test_summary_score_printed(runner: CliRunner, deck_file: Path) -> None:
     fake_result = SessionResult(total=2, correct=1, missed=["CPU"])
-    result = _run_with_mocked_db_and_engine(runner, deck_file, "sequential", fake_result)
+    result = _run_with_mocked_db_and_engine(
+        runner, deck_file, "sequential", fake_result
+    )
     assert "1/2" in result.output
 
 
 def test_summary_missed_cards_printed(runner: CliRunner, deck_file: Path) -> None:
     fake_result = SessionResult(total=1, correct=0, missed=["CPU"])
-    result = _run_with_mocked_db_and_engine(runner, deck_file, "sequential", fake_result)
+    result = _run_with_mocked_db_and_engine(
+        runner, deck_file, "sequential", fake_result
+    )
     assert "CPU" in result.output
 
 

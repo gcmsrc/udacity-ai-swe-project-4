@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -138,9 +138,7 @@ def test_run_calls_record_result_with_correct_flag(
     strategy.record_result.assert_any_call(deck[1], False)
 
 
-def test_run_does_not_call_show_summary(
-    deck: list[Flashcard], ui: MagicMock
-) -> None:
+def test_run_does_not_call_show_summary(deck: list[Flashcard], ui: MagicMock) -> None:
     strategy = MagicMock(spec=QuizMode)
     strategy.get_next_card.side_effect = [*deck, None]
     ui.prompt_answer.return_value = "wrong"

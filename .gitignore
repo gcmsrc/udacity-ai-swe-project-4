@@ -9,3 +9,5 @@
 
 # Ignore all .db files
 **/*.db
+
+**/rubric.md

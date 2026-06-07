@@ -21,8 +21,6 @@ from flashcard_quiz.utils.ui import TerminalUI
 
 app = typer.Typer(help="CLI flashcard quiz application.")
 
-_DB_PATH = Path.cwd() / "data" / "db" / "flashcards.db"
-
 
 @app.command()
 def main(
@@ -50,19 +48,22 @@ def main(
 
     cards = load_flashcards(deck)
 
+    db_path = Path.cwd() / "data" / "db" / "flashcards.db"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
     db = DatabaseConnection()
-    _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    db.connect(_DB_PATH)
-    repo = SessionRepository(db)
-    session_id = repo.create_session(str(deck))
+    db.connect(db_path)
+    try:
+        repo = SessionRepository(db)
+        session_id = repo.create_session(str(deck))
 
-    ui = TerminalUI()
-    engine = QuizEngine(strategy=strategy, ui=ui)
-    result = engine.run(cards)
+        ui = TerminalUI()
+        engine = QuizEngine(strategy=strategy, ui=ui)
+        result = engine.run(cards)
 
-    repo.save_session_result(session_id, result)
-    ui.show_summary(result)
-    db.disconnect()
+        repo.save_session_result(session_id, result)
+        ui.show_summary(result)
+    finally:
+        db.disconnect()
 
 
 if __name__ == "__main__":
