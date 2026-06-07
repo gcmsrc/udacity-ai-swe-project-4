@@ -1,0 +1,109 @@
+# Flashcard Quiz
+
+A CLI flashcard quiz application built with Python and [Typer](https://typer.tiangolo.com/).
+
+## Features
+
+- **Three quiz modes**
+  - `sequential` — cards presented in deck order
+  - `random` — cards shuffled each session
+  - `adaptive` — missed cards are re-weighted and drawn more often until the session ends
+- **Session persistence** — results are saved to a local SQLite database (`data/db/flashcards.db`)
+- **Rich terminal UI** — clean prompts and a summary table powered by [Rich](https://github.com/Textualize/rich)
+- **Bundled sample decks** — `data/sample_cards.json` and `data/countries.json` to get started immediately
+
+## Requirements
+
+- Python 3.11+
+- [uv](https://github.com/astral-sh/uv) (recommended) **or** pip
+
+## Installation
+
+### With uv (recommended)
+
+```bash
+uv sync
+```
+
+### With pip
+
+```bash
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+pip install -e .                 # installs the flashcard CLI entry-point
+```
+
+## Usage
+
+Activate the environment before running (if using pip):
+
+```bash
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+```
+
+### Via the `flashcard` CLI entry-point
+
+```bash
+flashcard data/sample_cards.json                       # sequential (default)
+flashcard data/sample_cards.json --mode random
+flashcard data/sample_cards.json --mode adaptive
+```
+
+### Via Python directly
+
+```bash
+python src/flashcard_quiz/main.py data/sample_cards.json
+python src/flashcard_quiz/main.py data/sample_cards.json --mode random
+python src/flashcard_quiz/main.py data/sample_cards.json --mode adaptive
+```
+
+### With uv (no manual activation needed)
+
+```bash
+uv run flashcard data/sample_cards.json
+uv run flashcard data/sample_cards.json --mode adaptive
+```
+
+## Deck format
+
+Two JSON formats are supported.
+
+**Array format** — a top-level list of card objects:
+
+```json
+[
+  {"front": "CPU", "back": "Central Processing Unit"},
+  {"front": "RAM", "back": "Random Access Memory"}
+]
+```
+
+**Wrapped format** — an object with a `cards` key:
+
+```json
+{
+  "cards": [
+    {"front": "CPU", "back": "Central Processing Unit"},
+    {"front": "RAM", "back": "Random Access Memory"}
+  ]
+}
+```
+
+Each card requires a `front` (question) and `back` (answer) string field.
+
+## Development
+
+Install dev dependencies:
+
+```bash
+uv sync --all-groups
+```
+
+| Command | Purpose |
+|---|---|
+| `uv run pytest` | Run tests |
+| `uv run pytest --cov=src --cov-report=html` | Tests with coverage |
+| `uv run black .` | Format code |
+| `uv run isort .` | Sort imports |
+| `uv run flake8 .` | Lint |
+| `uv run mypy src` | Type-check |

@@ -2343,3 +2343,59 @@ All fixes implemented and verified. Here's a summary of what was done:
 **Claude Response:**
 
 Session logged. The entry summarises the 10 accepted fixes applied across `session_repository.py`, `main.py`, `game_planner.py` (deleted), `adaptive.py`, and five test files, along with the clean formatting and test results.
+
+
+## Session: 2026-06-07 20:16:24 [bc69d917]
+
+**User Request:**
+
+Please create the README.md for the submission project.
+As per the rubric, the README.md should contain information like this:
+
+| **README Updates** | - Update README.md with new features and setup instructions<br>- Provide clear usage examples<br>- Document any dependencies or installation requirements | - Verify README accurately describes the current application<br>- Check that setup instructions are complete and accurate<br>- Ensure new features are properly documented
+_
+In general, however, specify how users can use the flaschard quiz (either runnning `pyhton src/flashcard_quiz/main.py` or directly via the `flashcard` cli. It is important to install the requirements and activate the environment.
+
+**Claude Response:**
+
+README written. It covers:
+
+- All three quiz modes (sequential, random, adaptive) with a brief description of what adaptive does
+- Installation via both `uv` and pip, including virtual environment activation
+- Three invocation paths: `flashcard` CLI, `python src/...`, and `uv run`
+- Deck JSON format with an example
+- Dev commands table (pytest, coverage, black, isort, flake8, mypy)
+
+
+## Session: 2026-06-07 20:17:55 [bc69d917]
+
+**User Request:**
+
+Things to update:
+Decks could also be nested JSON (cards and then a list)
+
+**Claude Response:**
+
+Updated the Deck format section to show both the flat array format and the `{"cards": [...]}` wrapped format, with a note on required fields.
+
+
+## Session: 2026-06-07 20:18:51 [bc69d917]
+
+**User Request:**
+
+Also, can you update the requirements.txt - but there owuld be an issue with the flasvhcard package as that would store a local path. can we add a step, in case users are using pip, to run the installation for the flaschard-quiz for the typer cli
+
+**Claude Response:**
+
+`requirements.txt` was already clean (no local path). I've added `pip install -e .` as the step that registers the `flashcard` entry-point after installing dependencies.
+
+
+## Session: 2026-06-07 20:22:26 [0768f6b7]
+
+**User Request:**
+
+instead of using the mckinsey jfrog in the uv.lock, can you change the url to be pypi?
+
+**Claude Response:**
+
+All JFrog URLs are gone. Added a project-level `uv.toml` with `index-url = "https://pypi.org/simple"` to override your global McKinsey config, then regenerated `uv.lock` — all URLs now point to `pypi.org` / `files.pythonhosted.org`.

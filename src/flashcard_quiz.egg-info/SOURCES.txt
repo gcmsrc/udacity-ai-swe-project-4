@@ -1,3 +1,4 @@
+README.md
 pyproject.toml
 src/flashcard_quiz/__init__.py
 src/flashcard_quiz/main.py
@@ -20,7 +21,6 @@ src/flashcard_quiz/utils/quiz_engine/quiz_engine.py
 src/flashcard_quiz/utils/strategies/__init__.py
 src/flashcard_quiz/utils/strategies/adaptive.py
 src/flashcard_quiz/utils/strategies/base.py
-src/flashcard_quiz/utils/strategies/game_planner.py
 src/flashcard_quiz/utils/strategies/random_strategy.py
 src/flashcard_quiz/utils/strategies/sequential.py
 src/flashcard_quiz/utils/ui/__init__.py
