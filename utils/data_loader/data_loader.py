@@ -65,7 +65,9 @@ class CardsDataLoader:
         if not cards_data:
             raise ValueError(f"Deck is empty: {path}")
 
-        return [self._parse_card(item, idx, path) for idx, item in enumerate(cards_data)]
+        return [
+            self._parse_card(item, idx, path) for idx, item in enumerate(cards_data)
+        ]
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -113,9 +115,7 @@ class CardsDataLoader:
             raise ValueError(f"Card at index {index} must be a JSON object in {path}")
         for key in _REQUIRED_FIELDS:
             if key not in item:
-                raise ValueError(
-                    f"Card at index {index} is missing '{key}' in {path}"
-                )
+                raise ValueError(f"Card at index {index} is missing '{key}' in {path}")
             if not isinstance(item[key], str):
                 raise ValueError(
                     f"Card at index {index} has non-string value for '{key}' in {path}"
