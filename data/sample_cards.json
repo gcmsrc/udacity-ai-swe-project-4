@@ -1,0 +1,7 @@
+[
+  {"front": "CPU", "back": "Central Processing Unit"},
+  {"front": "RAM", "back": "Random Access Memory"},
+  {"front": "GPU", "back": "Graphics Processing Unit"},
+  {"front": "SSD", "back": "Solid State Drive"},
+  {"front": "HTTP", "back": "HyperText Transfer Protocol"}
+]

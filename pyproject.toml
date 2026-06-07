@@ -1,0 +1,21 @@
+[project]
+name = "flashcard-quiz"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13",
+]
+
+[project.scripts]
+flashcard = "main:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+
+[tool.isort]
+profile = "black"

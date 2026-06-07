@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/Giacomo_Sarchioni/non-synced-documents/udacity/ai-software-engineer/04-vibe-engineering/submission/.claude/log_to_traces.sh",
+            "timeout": 15,
+            "statusMessage": "Logging session to traces.md..."
+          }
+        ]
+      }
+    ]
+  }
+}
