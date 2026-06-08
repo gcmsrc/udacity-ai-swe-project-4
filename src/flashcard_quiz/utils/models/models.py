@@ -31,4 +31,6 @@ class SessionResult:
     def from_json(cls, s: str) -> "SessionResult":
         """Deserialise a SessionResult from a JSON string."""
         data = json.loads(s)
-        return cls(total=data["total"], correct=data["correct"], missed=data.get("missed", []))
+        return cls(
+            total=data["total"], correct=data["correct"], missed=data.get("missed", [])
+        )
