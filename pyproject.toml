@@ -16,6 +16,7 @@ dependencies = [
     "platformdirs>=4.10.0",
     "pytokens>=0.4.1",
     "typing-extensions>=4.15.0",
+    "flake8>=7.3.0",
 ]
 
 [project.scripts]

@@ -15,3 +15,4 @@ Requires-Dist: pathspec>=1.1.1
 Requires-Dist: platformdirs>=4.10.0
 Requires-Dist: pytokens>=0.4.1
 Requires-Dist: typing-extensions>=4.15.0
+Requires-Dist: flake8>=7.3.0
